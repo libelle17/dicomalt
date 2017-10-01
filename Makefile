@@ -31,12 +31,15 @@
 # "make git" => aktualisiert die Datei auf dem zugeordneten git-Server
 # "make version" => kompilieren mit opts, installieren und aktualisieren auf git-Server mit einheitlicher Dateiversion
 # "make transfer <zielvz>" => kopieren der Programmdateien abzüglich bestimmter Kommentare in Zielverzeichnis <zielvz>
+# "make verschieb" => wie transfer, mit ../<DPROG>rein als Zielverzeichnis
+# "make vsneu" => wie verschieb, löscht vorher das als Zielverzeichnis (geht nur, wenn das github-Repository vorher gelöscht ist)
+# "make ruf" => ruft das Programm auf
 
 ICH::=$(firstword $(MAKEFILE_LIST))
 SRCS::=$(wildcard *.cpp)
 OBJ::=$(SRCS:.cpp=.o)
 CFLAGSr::=-c -Wall `mysql_config --cflags`
-LDFLAGSr::=`mysql_config --libs` -ltiff 
+LDFLAGSr::=`mysql_config --libs` -ltiff -lboost_iostreams -lboost_locale -lacl
 ifdef mitpg
  CFLAGS::=$(CFLAGSr) -I/usr/include/pgsql -Dmitpostgres
  LDFLAGS::=$(LDFLAGSr) -lpq
@@ -55,19 +58,55 @@ endif
 EXPFAD::=$(shell echo $(PATH) | tr -s ':' '\n' | grep /usr/ | head -n 1)
 EXPFAD::=$(shell echo $(PATH) | tr -s ':' '\n' | grep /usr/ | awk '{ print length, $$0 }' | sort -n -s | cut -d" " -f2- | head -n1)
 
-CCInst::=gcc6-c++
--include vars # wird durch install.sh generiert
-GDAT::=$(DATEIEN:inst.log=)
-GDAT::=$(GDAT:uninstallinv=)
-GDAT::=$(GDAT:Makefile=Makefile.roh)
+#// ifneq ($(shell g++-6 --version >$(KR); echo $$?),0)
+#//  CCName::=g++
+#//  CFLAGS::=$(CFLAGS) -std=gnu++11 # 7.8.17 nicht nötig für opensuse42, hinderlich für fedora; 5.9.17: geht nicht mehr (wg. auto)
+#// else
+# minimal erforderliche g++-Hauptversion
+MINGCCNR::=6
+#// endif
+#// 0=Version fehlt, 1=Version ist da
+#// GCCAB6::=$(shell expr `g++-6 -dumpversion 2>/dev/null||g++-7 -dumpversion 2>/dev/null||echo 0` \>= 6) 
+#// ifeq ('$(GCCAB6)','0')
+#// CCName=g++-6
+#// endif
+# maximal verfügbare g++-Version, falls die Verknüpfungen in /usr/bin stehen und evtl. /usr/bin/g++ nicht auf die höchste verknüpft ist
+MAXGCC::=$(shell { ls /usr/bin/g++* 2>/dev/null||echo 0;}|tail -n1)
+# deren Hauptversionsnummer
+MAXGCCNR::=$(shell echo $(MAXGCC)|cut -d- -f2)
+#1=verfügbare Version höher als die minimal notwendige, 0=nicht
+GCCNEU::=$(shell expr $(MAXGCCNR) \> $(MINGCCNR))
+# 1=minimal notwendige Version verfügbar, 0=nicht
+GCCOK::=$(shell expr $(MAXGCCNR) \>= $(MINGCCNR))
+# 1=Debian usw., 2=Opensuse, 3=Fedora usw., 4=Magieia, 5=Manjaro usw.
+DISTR::=$(shell which apt>/dev/null 2>&1&&echo 1||{ which zypper>/dev/null 2>&1&&echo 2||{ which dnf>/dev/null 2>&1||which yum>/dev/null 2>&1&&echo 3||{ which urpmi.update>/dev/null 2>&1&&echo 4||{ which pacman>/dev/null 2>&1&&echo 5||echo 0;};};};})
+ifeq ($(GCCNEU),1)
+MINGCCNR::=$(MAXGCCNR)
+endif
+CCName::=g++-$(MINGCCNR)
+ifeq ($(DISTR),1)
+CCName::=g++-$(MINGCCNR)
+CCInst::=gcc-$(MINGCCNR) g++-$(MINGCCNR)
+endif
+ifeq ($(DISTR),2)
+OBEINS::=1
+endif
+ifeq ($(DISTR),3)
+CCName::=g++
+OBEINS::=1
+endif
+ifeq ($(OBEINS),1)
+CCInst::=gcc$(MINGCCNR) gcc$(MINGCCNR)-c++
+endif
+-include vars # wird durch install.sh generiert; CCInst muss vorher definiert werden, DPROG und GDAT dürfen nur nachher verwendet werden
 PROGGROSS::=`echo $(DPROG) | tr a-z A-Z`
 EXEC::=$(DPROG)
 INSTEXEC::=$(EXPFAD)/$(EXEC)
-ifneq ($(shell g++-6 --version >$(KR); echo $$?),0)
- CCName::=g++
- CFLAGS::=$(CFLAGS) -std=gnu++11
-else
- CCName::=g++-6
+GDAT::=$(DTN:inst.log=)
+GDAT::=$(GDAT:uninstallinv=)
+GDAT::=$(GDAT:Makefile=Makefile.roh)
+ifeq ($(DISTR),1)
+COMP::=$(COMP) $(CCInst)
 endif
 CC::=$(CCName) # CC=$(SUDC)$(CCName)
 libmcd::=$(libmc)-$(dev)
@@ -98,7 +137,7 @@ slc::=$(SUDC)/sbin/ldconfig
 # i1siun=$(call siunins,$(1),$(1))
 # i1siund=$(call siuninsd,$(1),$(1)) # direkt
 # si_unins=$(SPR)$(1)>$(KR)||{ $(call i_unins,$(1),$(2))};
-# GROFFCHECK::=$(call i1siund,$(pgroff)):
+# GROFFCHECK::=$(call i1siund,$(PGROFF)):
 
 DEPDIR ::= .d
 $(shell mkdir -p $(DEPDIR)>$(KR))
@@ -180,17 +219,21 @@ weiter: compiler $(EXEC) $(GZS)
 git: README.md
 #	@git config --global user.name "Gerald Schade"
 #	@git config --global user.email "gerald.schade@gmx.de"
-	@printf " Copying files from/ Kopiere Dateien von: %b%s%b (Version %b%s%b) -> git (%b%s%b)\n" $(blau) "$(DPROG)" $(reset) $(blau) $$(cat versdt)\
-  $(reset) $(blau) "$$(F1=.git/FETCH_HEAD;test -f $$F1&&{ cut -f2-< $$F1|sed 's/^\s*//';:;}||cat .git/./config|sed -n '/url =/p')" $(reset) >$(BA) 
+	@printf " Copying files from/ Kopiere Dateien von: %b%s%b (Version %b%s%b) -> git (%b%s%b)\n" $(blau) "$(PWD)" $(reset) $(blau) $$(cat versdt)\
+  $(reset) $(blau) "$$(F1=.git/FETCH_HEAD;test -f $$F1&&{ cut -f2-< $$F1|sed 's/^\s*//';:;};[ -d .git ]&&cat .git/./config|sed -n '/url =/p')" $(reset) >$(BA) 
 	-@cp -au Makefile Makefile.roh
+	@[ -d .git ]||{ curl -u "$(DPROG)" https://api.github.com/user/repos -d "{\"name\":\"$(DPROG)\"}" >/dev/null; git init;git add $(GDAT:vgb.cpp=) versdt README.md;}
 	$(call setz_gitv,".")
 	@git config --global push.default simple
 	@git add -u
 	@git commit -m "Version $$(cat versdt)"
-	@git push
+	@grep remote\ \"origin\"] .git/config >/dev/null 2>&1||git remote add origin https://github.com/$$(sed 's/"//g' gitvdt)/$(DPROG).git
+	@git push -u origin master
 
 anzeig:
 # 'echo -e' geht nicht z.B. in ubuntu
+	@[ "$(DPROG)" ]||{ printf "Datei/File %b'vars'%b fehlerhaft/faulty, bitte vorher/please call %b'./install.sh'%b aufrufen/before!\n" \
+	       $(blau) $(reset) $(blau) $(reset);let 0;}
 	@printf " %bGNU Make%b, Target file/Zieldatei: %b%s%b, before/vorher:                        \n" $(gruen) $(reset) $(rot) "$(EXEC)" $(reset) >$(BA)
 	@printf " '%b%s%b'\n" $(blau) "$$(ls -l --time-style=+' %d.%m.%Y %H:%M:%S' --color=always $(EXEC) $(KF))" $(reset) >$(BA)
 	@printf " Source files/Quelldateien: %b%s%b\n" $(blau) "$(SRCS)" $(reset) >$(BA)
@@ -233,17 +276,20 @@ $(DEPDIR)/%.d: ;
 
 .PHONY: compiler
 compiler:
-	@printf " Untersuche/Examining Compiler ...\r" >$(BA)
+	@printf " Untersuche/Examining Compiler ...\n" >$(BA)
 ifeq ('$(SPR)','')
 $(warning Variable 'SPR' not assigned, please call './install.sh' before!)
 $(error Variable 'SPR' nicht belegt, bitte vorher './install.sh' aufrufen!)
 endif
-	@./configure inst "$(CCName)" "$(COMP)"
+	@[ "$(GCCOK)" = "1" ]||{ \
+	[ "$(DISTR)" = "1" ]&&{ $(SUDC)add-apt-repository ppa:ubuntu-toolchain-r/test;$(SUDC)apt-get update;};:;\
+	{ printf "Installiere/Installing Compiler ...\n" >$(BA);./configure inst "$(CCInst)" "$(COMP)";:;};}
 	-@for r in 1 2;do [ $$r = 1 ]&&{ lc="$(libmcd)";:;}||lc="$(libmc1d)";\
 	[ -f /usr/include/mysql/mysql.h>$(KR) ]&& \
-	find $$(find /usr -maxdepth 1 -type d -name "lib*" $(KF)|sort -r) -name "libmysqlclient.so" -print -quit $(KF)|grep ''>$(KR)&& break;\
+	find $$(find /usr -maxdepth 1 -type d -name "lib*" $(KF)|sort -r) -regextype egrep -regex ".*libm(ysql|ariadb)client.so" -print -quit $(KF)|\
+  	grep ''>$(KR)&& break;\
 	./configure inst _ "$$lc" verbose; done
-	-@[ -z $$mitpg ]||$(SPR) $(pgd)>$(KR)||{ ./configure inst _ "$(pgd)" verbose;./configure inst _ "$(slc)" verbose;};
+	-@[ -z $$mitpg ]||$(SPR) $(pgd)>$(KR)||{ ./configure inst _ "$(pgd)" verbose;$(slc);};
 # 3.5.17: auch libtiff5 hat gefehlt
 	-@for r in 1 2;do \
 	[ $$r = 1 ]&& LTakt="$(LT)" ||{ [ -z "$(LT5)" ]&&break;LTakt="$(LT5)";};\
@@ -251,6 +297,11 @@ endif
 	find $$(find /usr -maxdepth 1 -name "lib*" $(KF)|sort -r) -type l -xtype f -name "libtiff.so" -print -quit $(KF)|grep ''>$(KR)&& break;\
 	./configure inst _ "$$LTakt" verbose;\
 	done; :;
+	-@[ -f /usr/include/sys/acl.h ]|| ./configure inst _ "$(LACL)" verbose;
+	-@$(SPR) $(LBOOST)>$(KR)|| ./configure inst _ "$(LBOOST)" verbose;
+	-@[ "$(LBIO)" ]&&{ $(SPR) "$(LBIO)">$(KR)||./configure inst _ "$(LBIO)" verbose;}||:
+	-@[ "$(LBLO)" ]&&{ $(SPR) "$(LBLO)">$(KR)||./configure inst _ "$(LBLO)" verbose;}||:
+#//	-@[ -f /usr/include/boost/iostreams/device/mapped_file.hpp -o -f /usr/share/doc/libboost-dev ]|| ./configure inst _ "$(LBOOST)" verbose;
 # ggf. Korrektur eines Fehlers in libtiff 4.0.7, notwendig fuer hylafax+, 17.1.17 in Programm verlagert
 	@printf "                                  \r" >$(BA)
 
@@ -263,7 +314,7 @@ stumm stumminst: blau::=""
 stumm stumminst: gruen::=""
 stumm stumminst: reset::=""
 
-stumm: alles
+stumm: all
 
 stumminst: install
 
@@ -293,9 +344,9 @@ endif
 	printf " %b$@%b neu erstellt aus: $$A\n" $(blau) $(reset)
 
 define priv_html
-	-@printf " erstelle/generating:%b$(1)%b\r" $(blau) $(reset)
+	-@printf " erstelle/generating:%b$(1)%b\n" $(blau) $(reset)
 	-@groff -mandoc -Thtml -v >$(KR);EXC="$$$$?"; \
-	for p in $(pgroff); do { [ $$$${EXC} -gt 1 ]|| ! which groff>$(KR)|| ! $(SPR) $$p>$(KR);}&&{ ./configure inst _ $$p verbose;}; done; :;
+	for p in $(PGROFF); do { [ $$$${EXC} -gt 1 ]|| ! which groff>$(KR)|| ! $(SPR) $$$$p>$(KR);}&&{ ./configure inst _ $$$$p verbose;}; done; :;
 	-@rm -f $(1).html
 	-@sed -e 's/²gitv²/$(GITV)/g;s/²DPROG²/$(DPROG)/g;'\
 	 -e 's/Ä/\&Auml;/g;s/Ö/\&Ouml;/g;s/Ü/\&Uuml;/g;s/ä/\&auml;/g;s/ö/\&ouml;/g;s/ü/\&uuml;/g;s/ß/\&szlig;/g;'\
@@ -306,6 +357,7 @@ define priv_html
 	@printf "%b%s%b neu aus %b%s%b erstellt\n" $(blau) "$(1).html" $(reset) $(blau) "$(1)" $(reset)
 endef
 
+# Aufruf des Programms mit -sh, um die Optionen in den manpages zu aktualisieren
 define manges
 $(1).html: $(EXEC) $(1)
 	$(call priv_html, $(1))
@@ -332,7 +384,7 @@ clean: distclean fernclean
 
 .PHONY: distclean
 distclean: 
-	@printf " Bereinige/Cleaning ...\r" >$(BA)
+	@printf " Bereinige/Cleaning ...\n" >$(BA)
 	@ZUL="$(EXEC) $(OBJ) .d/* $(HTMLS)";GEL=$$(ls -1 $$ZUL $(KF)|tr '\n' ' '); rm -f $$ZUL $(KF); \
 	[ -z "$$(echo $$GEL|sed 's/ *$$//')" ]&&GEL="Hier/here: Nichts/nothing";printf " %b$$GEL%b geloescht/deleted!\n" $(blau) $(reset); 
 
@@ -350,25 +402,40 @@ confclean:
 .PHONY: uninstall
 uninstall: fernclean
 	-@tac $(UNF)>tmp_$(UNROH)&& $(SUDC)blau=$(blau) reset=$(reset) bash tmp_$(UNROH);: # uninstallinv von hinten nach vorne abarbeiten
+	-@[ "$(DISTR)" = "1" ]&&{ $(SUDC)apt-get -f install;};:;
 	-@printf "Fertig mit uninstall!\n"
 
-#rufe:
-#	printf '$(UPR)$(pgroff)\nprintf "$$blau%%s$$reset\\n" "$(UPR)$(pgroff)"\n'>>gtest
-#	-@$(SUDC)blau=$(blau) reset=$(reset) sh gerufen
+#//rufe:
+#//	printf '$(UPR)$(PGROFF)\nprintf "$$blau%%s$$reset\\n" "$(UPR)$(PGROFF)"\n'>>gtest
+#//	-@$(SUDC)blau=$(blau) reset=$(reset) sh gerufen
 
-#teste:
-#	sh -c 'VAR="lange\
-#	 Varible"; echo $$VAR'
-#	 echo $(GROFFCHECK)
-#	 @echo $(COMP)
-#	 @echo $(words $(COMP))
-#	 @printf "$$blau$(urepo)$$reset\n"
-#	 for P in $(COMP); do echo $$P; VAR="$$P"; echo $$VAR; $(call uninst,$P) done
-#	 $(foreach VAR,$(COMP),echo $(VAR)\n)
-#	 @$(foreach VAR,$(COMP),$(call sunins,$(VAR),$(VAR)))
-#	$(foreach PG,$(COMP),$(call si_unins,$(PG),$(PG);$(urepo)))
-#	 echo $(call uninst,$(COMP))
-#	$(SUDC)blau=$(blau) reset=$(reset) sh gtest
+#//teste:
+#//	sh -c 'VAR="lange\
+#//	 Varible"; echo $$VAR'
+#//	 echo $(GROFFCHECK)
+#//	 @echo $(COMP)
+#//	 @echo $(words $(COMP))
+#//	 @printf "$$blau$(UREPO)$$reset\n"
+#//	 for P in $(COMP); do echo $$P; VAR="$$P"; echo $$VAR; $(call uninst,$P) done
+#//	 $(foreach VAR,$(COMP),echo $(VAR)\n)
+#//	 @$(foreach VAR,$(COMP),$(call sunins,$(VAR),$(VAR)))
+#//	$(foreach PG,$(COMP),$(call si_unins,$(PG),$(PG);$(UREPO)))
+#//	 echo $(call uninst,$(COMP))
+#//	$(SUDC)blau=$(blau) reset=$(reset) sh gtest
+
+.PHONY: verschieb
+verschieb:
+	Z=../$(DPROG)rein;[ "$(LOESCH)" = "1" ]&&rm -rf $$Z;make all install&&\
+		{ make transfer $$Z;{ cd $$Z;[ -d .git ]||make git;./configure;make version; cd - >$(KR);};}
+
+.PHONY: vsneu
+# geht nur, wenn das github-Repository vorher gelöscht ist
+vsneu: LOESCH::=1
+vsneu: verschieb
+
+.PHONY: ruf
+ruf:
+	@$(EXPFAD)/$(EXEC)
 
 .PHONY: version
 version: dovers
@@ -380,7 +447,7 @@ dovers: README.md
 	-@cp -au Makefile Makefile.roh
 	$(call setz_gitv,".")
 	@git config --global push.default simple
-	@git rm --cached --ignore-unmatch $(DATEIEN) Makefile.roh vgb.cpp versdt README.md
+	@git rm --cached --ignore-unmatch $(DTN) Makefile.roh vgb.cpp versdt README.md
 	@git commit -m "Vor Version $$(cat versdt)"
 	@git add $(GDAT:vgb.cpp=) versdt README.md 
 	@git commit -m "Version $$(cat versdt)"
@@ -404,7 +471,7 @@ dotrans:
 	};\
 	[ -z "$(Ziel)" ]&&{ Start=0;:;}||[ ! -d "$(Ziel)" ]&& Start=0;\
 	if [ $$Start = 0 ]; then\
-	 echo Makes a fair copy of the files of a github repository/ Kopiert Dateien eines github-Repositorys abzüglich mancher Kommentare ins Reine;\
+	 printf "Makes a fair copy of the files of a github repository/ Kopiert Dateien eines github-Repositorys abzüglich mancher Kommentare ins Reine\n";\
 	 printf "Synatax: %bmake $(TRS) \<zielverzeichnis\>%b\n" $(blau) $(reset);\
 	 printf "Directory/Verzeichnis "%b$(Ziel)%b" nicht gefunden.\n" $(blau) $(reset);\
 	 exit 1;\
@@ -420,8 +487,8 @@ dotrans:
 	  chmod --reference=$$D $(Ziel)/$$D;\
 	  chown --reference=$$D $(Ziel)/$$D;\
 	 done;\
-	 for D in .exrc Makefile install.sh man_?? versdt viall configure; do\
-	  [ -f $$D ]&&{ sed '/^#\/\/.*/d;s_
+	 for D in .exrc Makefile install.sh man_?? versdt pname viall configure; do\
+	  [ -f $$D ]&&{ sed '/^#\/\/.*/d;s_#\/\/.*__g' $$D>$(Ziel)/$$D;((DAT++));\
 	   printf "$$blau$$D$$reset nach $$blau$(Ziel)/$$reset kopiert\n"; };\
 	   chmod --reference=$$D $(Ziel)/$$D;\
 	   chown --reference=$$D $(Ziel)/$$D;\
@@ -430,6 +497,7 @@ dotrans:
 	   printf "%b$(Ziel)/$$D%b in %b$(Ziel)/$$ROH/%b umbenannt\n" $(blau) $(reset) $(blau) $(reset);\
 	  };\
 	 done;\
+	 echo $(DPROG)>$(Ziel)/pname;\
 	 printf "Insgesamt $$blau$$DAT$$reset Dateien kopiert\n";\
 	fi;
 	@$(call setz_gitv,$(Ziel))
@@ -438,6 +506,7 @@ dotrans:
 define setz_gitv
 	 @D=$(1)/.git/config; GITV=$$([ -f $$D ]&&sed -n '/ *url =.*com/{s/.*com\/\([^/]*\).*/\1/p}' $$D);\
 	 sed -i 's/^\(\[ -z .* \]&& GITV=\).*;/\1'$$GITV';/g' $(1)/install.sh;\
+	 [ -z "$$GITV" ]&& GITV=$(EXEC);\
 	 [ "$$GITV" = "$(sed 's/"//g' $(1)/gitvdt)" ]|| echo \"$$GITV\">$(1)/gitvdt;:;
 endef
 
