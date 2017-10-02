@@ -50,6 +50,8 @@ enum T_
 	T_Patientennr,
 	T_Geschlecht,
 	T_Bildtyp,
+	T_TransducerData,
+	T_ProcessingFunction,
 	T_Aufnahmedatum,
 	T_Arzt,
 	T_Tabelle_fuer_dicom_Bilder,
@@ -71,6 +73,10 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
  {"Geschlecht","sex"},
  // T_Bildtyp
  {"Bildtyp","image type"},
+ // T_TransducerData
+ {"Schallkopf","transducer"},
+ // T_ProcessingFunction
+ {"Programm","program"},
  // T_Aufnahmedatum
  {"Aufnahmedatum","acquisition date"},
  // T_Arzt
@@ -114,6 +120,8 @@ void pruefdictab(int aktc,int obverb,int oblog)
   Feld("Geschlecht","varchar","1","",Tx[T_Geschlecht],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("Bildtyp","varchar","1","",Tx[T_Bildtyp],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("ReferringPhysicianName","varchar","1","",Tx[T_Arzt],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
+  Feld("TransducerData","varchar","1","",Tx[T_TransducerData],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
+  Feld("ProcessingFunction","varchar","1","",Tx[T_ProcessingFunction],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("Aufnahmedatum","datetime","0","0",Tx[T_Aufnahmedatum],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
  };
  Tabelle tad(My,tbn,felder,sizeof felder/sizeof *felder,/*indices=*/0,/*index size*/0,Tx[T_Tabelle_fuer_dicom_Bilder]);
@@ -151,9 +159,10 @@ int main(int argc, char** argv)
 	for(size_t nr=0;nr<rueck.size();nr++) {
 		svec ir;
 		systemrueck("dcmdump '"+rueck[nr]+"' 2>/dev/null",obverb,oblog,&ir);
-		const auto dim=7;
+		const auto dim=9;
 		string erg[dim];
-		const char *knz[7]={"PatientName","PatientBirthDate","PatientID","PatientSex","ImageType","ReferringPhysicianName","AcquisitionDateTime"};
+		const char *knz[dim]={"PatientName","PatientBirthDate","PatientID","PatientSex",
+			                    "ImageType","ReferringPhysicianName","TransducerData","ProcessingFunction","AcquisitionDateTime"};
 		uchar gibaus=0;
 		string ord[dim];
 		string bname;
@@ -169,9 +178,9 @@ int main(int argc, char** argv)
 								string roh=ir[zl].substr(p1+1,p2-p1-1);
 								if ((p1=roh.find('\''))!=string::npos) roh.erase(p1);
 								if ((p1=roh.find('\"'))!=string::npos) roh.erase(p1);
-								if (j==4) if ((p1=roh.rfind('\\'))!=string::npos) roh.erase(0,p1+1);
-								if (j==6) if ((p1=roh.rfind('.'))!=string::npos) roh.erase(p1);
-								if (j==0) ersetzAlle(&roh,"^",",");
+								if (j==4) if ((p1=roh.rfind('\\'))!=string::npos) roh.erase(0,p1+1); // ImageType
+								if (j==8) if ((p1=roh.rfind('.'))!=string::npos) roh.erase(p1); // AcquisitionDateTime
+								if (j==0) ersetzAlle(&roh,"^",","); // PatientName
 								ord[j]=roh;
 								fehltzahl--;
 								gibaus=1;
@@ -184,6 +193,11 @@ int main(int argc, char** argv)
 		} // 	for(size_t zl=0;zl<ir.size();zl++)
 		RS rins(My);
 		vector<instyp> einf;
+		char vor=0;
+	  for(unsigned j=1;j<ord[0].length();j++) {
+		 if (vor&&vor!=',') ord[0][j]=tolower(ord[0][j]);
+		 vor=ord[0][j];
+		}
 		einf.push_back(instyp(My->DBS,"PatientName",&ord[0]));
 		struct tm tmg={0};
 		strptime(ord[1].c_str(),"%Y%m%d",&tmg);
@@ -192,6 +206,8 @@ int main(int argc, char** argv)
 		einf.push_back(instyp(My->DBS,"Geschlecht",&ord[3]));
 		einf.push_back(instyp(My->DBS,"Bildtyp",&ord[4]));
 		einf.push_back(instyp(My->DBS,"ReferringPhysicianName",&ord[5]));
+		einf.push_back(instyp(My->DBS,"TransducerData",&ord[6]));
+		einf.push_back(instyp(My->DBS,"ProcessingFunction",&ord[7]));
 		struct tm tma={0};
 		strptime(ord[6].c_str(),"%Y%m%d%H%M%S",&tma);
 		const string jahr=ord[6].substr(0,4);
