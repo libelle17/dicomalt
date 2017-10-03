@@ -56,6 +56,7 @@ enum T_
 	T_Arzt,
 	T_Tabelle_fuer_dicom_Bilder,
 	T_Fehler_beim_Pruefen_von_dictab,
+	T_VorgbSpeziell,
 	T_MAX
 };
 char const *DPROG_T[T_MAX+1][SprachZahl]={
@@ -85,6 +86,8 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
  {"Tabelle fuer dicom-Bilder","table for dicom pictures"},
  // T_Fehler_beim_Pruefen_von_dictab
  {"Fehler eim Prüfen der Tabelle dictab","error checking table dictab"},
+	// T_VorgbSpeziell
+	{"VorgbSpeziell()","specificprefs()"},
  {"",""}
 };
 class TxB Tx((const char* const* const* const*)DPROG_T);
@@ -96,9 +99,9 @@ const string dbq="fotosinp";
 const string tbn="dictab";
 const int maxconz=1;
 linst_cl *linstp=0;
-DB *My=0;
 
-void initdb(int obverb/*=0*/,int oblog/*=0*/)
+// wird aufgerufen in: main
+int paramcl::initDB()
 {
  My=new DB(myDBS,linstp,host,muser,mpwd,maxconz,dbq,/*port=*/0,/*unix_socket=*/0,/*client_flag=*/0,obverb,oblog);
  if (My->ConnError) {
@@ -107,9 +110,10 @@ void initdb(int obverb/*=0*/,int oblog/*=0*/)
  } else {
   My->lassoffen=1;
  }
-}
+ return 0;
+} // int paramcl::initDB()
 
-void pruefdictab(int aktc,int obverb,int oblog)
+void paramcl::pruefdictab(int aktc)
 {
  Log(violetts+Tx[T_pruefdictab]+schwarz,obverb,oblog);
  Feld felder[]= {
@@ -120,6 +124,7 @@ void pruefdictab(int aktc,int obverb,int oblog)
   Feld("Geschlecht","varchar","1","",Tx[T_Geschlecht],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("Bildtyp","varchar","1","",Tx[T_Bildtyp],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("ReferringPhysicianName","varchar","1","",Tx[T_Arzt],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
+  Feld("PerformingPhysicianName","varchar","1","",Tx[T_Arzt],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("TransducerData","varchar","1","",Tx[T_TransducerData],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("ProcessingFunction","varchar","1","",Tx[T_ProcessingFunction],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("Aufnahmedatum","datetime","0","0",Tx[T_Aufnahmedatum],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
@@ -129,128 +134,196 @@ void pruefdictab(int aktc,int obverb,int oblog)
   Log(rots+Tx[T_Fehler_beim_Pruefen_von_dictab]+schwarz,1,1);
 	exit(11);
  }
-}
+} // void paramcl::pruefdictab(int aktc)
 
-int main(int argc, char** argv)
+paramcl::paramcl(const int argc, const char *const *const argv)
 {
-	int obverb=2,oblog=0;
-	if(argc>1) {
-	 string besitzer=(argc>2?argv[2]:"");
-	 string benutzer=(argc>3?argv[3]:"");
-	 int mitfacl=(argc>4?!strcmp(argv[4],"1")?1:0:0);
-	 pruefverz(argv[1],obverb,/*oblog=*/0,/*obmitfacl=*/mitfacl,/*obmitcron=*/1,besitzer,benutzer); 
-	}
-	const int aktc=0;
-	const string qvz="/DATA/Patientendokumente/HDneu";
-	const string avz="/DATA/Patientendokumente/HDalt";
-	const string zvz="/DATA/Patientendokumente/test";
-	const string z2vz="/DATA/Patientendokumente/eingelesen";
-	linst_cl linst(obverb,oblog);
-	linstp=&linst;
-	//	pruefverz(zvz,obverb,0,1,1,"sturm","sturm");
-	initdb(obverb,oblog);
-	if (!My) exit(5); // Datenbankverbindung nicht erstellbar
-	pruefdictab(aktc,obverb,oblog);
-	svec rueck;
-	systemrueck("find "+qvz+" -type f -not -path '*\\.*' -not -path '*DICOMDIR*'",obverb,oblog,&rueck);
-	if (!rueck.size()) {
-	 Log(rots+"Keine Dateien in '"+blau+qvz+rot+"' gefunden!",1,0);
-	}
-	for(size_t nr=0;nr<rueck.size();nr++) {
-		svec ir;
-		systemrueck("dcmdump '"+rueck[nr]+"' 2>/dev/null",obverb,oblog,&ir);
-		const auto dim=9;
-		string erg[dim];
-		const char *knz[dim]={"PatientName","PatientBirthDate","PatientID","PatientSex",
-			                    "ImageType","ReferringPhysicianName","TransducerData","ProcessingFunction","AcquisitionDateTime"};
-		uchar gibaus=0;
-		string ord[dim];
-		string bname;
-		int fehltzahl=dim;
-		for(size_t zl=0;zl<ir.size();zl++) {
-			for(int j=0;j<dim;j++) {
-				if (ord[j].empty()) {
-					if (ir[zl].find(knz[j])!=string::npos) {
-						size_t p1=ir[zl].find('[');
-						if (p1!=string::npos) {
-							size_t p2=ir[zl].find(']',p1);
-							if (p2!=string::npos) {
-								string roh=ir[zl].substr(p1+1,p2-p1-1);
-								if ((p1=roh.find('\''))!=string::npos) roh.erase(p1);
-								if ((p1=roh.find('\"'))!=string::npos) roh.erase(p1);
-								if (j==4) if ((p1=roh.rfind('\\'))!=string::npos) roh.erase(0,p1+1); // ImageType
-								if (j==8) if ((p1=roh.rfind('.'))!=string::npos) roh.erase(p1); // AcquisitionDateTime
-								if (j==0) ersetzAlle(&roh,"^",","); // PatientName
-								ord[j]=roh;
-								fehltzahl--;
-								gibaus=1;
+	cl=argv[0];
+	for(int i=1;i<argc;i++)
+		if (argv[i][0]) {
+			argcmv.push_back(argcl(i,argv)); 
+			cl+=" ";
+			cl+=argv[i];
+		} //     if (argv[i][0])
+	tstart=clock();
+	langu=holsystemsprache(obverb);
+	//  akonfdt.clear();
+} // paramcl::paramcl()
+
+// wird aufgerufen in: main
+void paramcl::getcommandl0()
+{
+	Log(violetts+"getcommandl0()"+schwarz);
+	// Reihenfolge muss koordiniert werden mit lieskonfein und rueckfragen
+	agcnfA.init(16, "language","host","muser","mpwd","datenbank","findvers","duser",
+			"cronminut","autoupd","logvz","logdname","oblog","qvz","avz","zvz","z2vz");
+	gcl0();
+} // void paramcl::getcommandl0(int argc, char** argv)
+
+constexpr const unsigned datcl::dim;
+constexpr const char *datcl::knz[dim];
+constexpr const unsigned datcl::pnnr, datcl::itnr, datcl::rpnr, datcl::tdnr, datcl::pfnr, datcl::adnr;
+
+void datcl::inDB(paramcl& pm,const int& aktc)
+{
+			systemrueck("dcmdump '"+name+"' 2>/dev/null",pm.obverb,pm.oblog,&ir);
+			string erg[dim];
+			gibaus=0;
+			int fehltzahl=dim;
+			for(size_t zl=0;zl<ir.size();zl++) {
+				for(unsigned j=0;j<dim;j++) {
+					if (ord[j].empty()) {
+						if (ir[zl].find(knz[j])!=string::npos) {
+							size_t p1=ir[zl].find('[');
+							if (p1!=string::npos) {
+								size_t p2=ir[zl].find(']',p1);
+								if (p2!=string::npos) {
+									string roh=ir[zl].substr(p1+1,p2-p1-1);
+									if (j==tdnr) if ((p1=roh.find('\\'))!=string::npos) roh.erase(p1);
+									if ((p1=roh.find('\''))!=string::npos) roh.erase(p1);
+									if ((p1=roh.find('\"'))!=string::npos) roh.erase(p1);
+									if (j==itnr) if ((p1=roh.rfind('\\'))!=string::npos) roh.erase(0,p1+1); // ImageType
+									if (j==adnr) if ((p1=roh.rfind('.'))!=string::npos) roh.erase(p1); // AcquisitionDateTime
+									if (j==pnnr) ersetzAlle(&roh,"^",","); // PatientName
+									ord[j]=roh;
+									fehltzahl--;
+									gibaus=1;
+								}
 							}
 						}
 					}
 				}
-			}
-			if (!fehltzahl) break;
-		} // 	for(size_t zl=0;zl<ir.size();zl++)
-		RS rins(My);
-		vector<instyp> einf;
-		char vor=0;
-	  for(unsigned j=1;j<ord[0].length();j++) {
-		 if (vor&&vor!=',') ord[0][j]=tolower(ord[0][j]);
-		 vor=ord[0][j];
-		}
-		einf.push_back(instyp(My->DBS,"PatientName",&ord[0]));
-		struct tm tmg={0};
-		strptime(ord[1].c_str(),"%Y%m%d",&tmg);
-		einf.push_back(instyp(My->DBS,"Geburtsdatum",&tmg));
-		einf.push_back(instyp(My->DBS,"PatientID",&ord[2]));
-		einf.push_back(instyp(My->DBS,"Geschlecht",&ord[3]));
-		einf.push_back(instyp(My->DBS,"Bildtyp",&ord[4]));
-		einf.push_back(instyp(My->DBS,"ReferringPhysicianName",&ord[5]));
-		einf.push_back(instyp(My->DBS,"TransducerData",&ord[6]));
-		einf.push_back(instyp(My->DBS,"ProcessingFunction",&ord[7]));
-		struct tm tma={0};
-		strptime(ord[6].c_str(),"%Y%m%d%H%M%S",&tma);
-		const string jahr=ord[6].substr(0,4);
-		einf.push_back(instyp(My->DBS,"Aufnahmedatum",&tma));
-		svec eindfeld;
-		eindfeld<<"PatientName";
-		eindfeld<<"Geburtsdatum";
-		eindfeld<<"PatientID";
-		eindfeld<<"Aufnahmedatum";
-		int ZDB=0;
-		string id; // Rueckgabe: ID
-		rins.tbins(tbn,einf,aktc,/*sammeln=*/0,/*obverb=*/ZDB,&id,/*eindeutig=*/0,eindfeld);
-		Log("ID: '"+violetts+id+schwarz+"'",obverb,oblog);
-		for(int j=0;j<dim;j++) {
-			bname+=ord[j]+'_';
-		}
-		if (id.empty()) {
-			Log(rots+bname+schwarz+" schon da!",obverb,oblog);
-		} else {
-			string neuname=zvz+"/"+bname+".png";
-			systemrueck("dcmj2pnm +on2 '"+rueck[nr]+"' > '"+neuname+"'",obverb,oblog);
-			struct stat nst={0};
-			if (!lstat(neuname.c_str(),&nst)) {
-				struct tm tm={0};
-				strptime(ord[6].c_str(),"%Y%m%d%H%M%S",&tm);
-				tm.tm_isdst=-1;
-				time_t modz=mktime(&tm);
-				struct utimbuf ub={0};
-				ub.modtime=modz;
-				ub.actime=modz;
-				if (utime(neuname.c_str(),&ub)) {
-					Log(rots+"Fehler beim Datumsetzen von '"+blau+neuname+schwarz,obverb,oblog);
+				if (!fehltzahl) break;
+			} // 	for(size_t zl=0;zl<ir.size();zl++)
+			RS rins(pm.My);
+			vector<instyp> einf;
+			for(unsigned j=0;j<dim;j++) {
+				if (j==pnnr || j==pfnr) {
+					char vor=0; //// (j==pnnr?0:1);
+					for(unsigned jj=0;jj<ord[j].length();jj++) {
+						if (vor&&vor!=','&&vor!='-') ord[j][jj]=tolower(ord[j][jj]);
+						vor=ord[j][jj];
+					}
 				}
-				systemrueck("chown sturm:praxis '"+neuname+"'",obverb,oblog);
-				string cmd="cp -a '"+neuname+"' '"+z2vz+"/"+jahr+"/'";
-				systemrueck(cmd,obverb,oblog);
-			} else {
-			 RS weg(My,"DELETE FROM `"+tbn+"` WHERE ID="+id,aktc,ZDB);
 			}
-			//		systemrueck("touch -r '"+rueck[nr]+"' '"+neuname+"'",obverb,oblog); // = zu spaet
-			if (gibaus)
-				Log(bname,obverb,oblog);
-			Log("Nr: "+blaus+ltoan(nr)+schwarz+", "+blau+rueck[nr]+schwarz+" "+blau+(ir.size()?ir[0]:"")+schwarz,obverb,oblog);
-		}
-	}
+			einf.push_back(instyp(pm.My->DBS,"PatientName",&ord[pnnr]));
+			struct tm tmg={0};
+			strptime(ord[1].c_str(),"%Y%m%d",&tmg);
+			einf.push_back(instyp(pm.My->DBS,"Geburtsdatum",&tmg));
+			einf.push_back(instyp(pm.My->DBS,"PatientID",&ord[2]));
+			einf.push_back(instyp(pm.My->DBS,"Geschlecht",&ord[3]));
+			einf.push_back(instyp(pm.My->DBS,"Bildtyp",&ord[itnr]));
+			einf.push_back(instyp(pm.My->DBS,"ReferringPhysicianName",&ord[rpnr]));
+			einf.push_back(instyp(pm.My->DBS,"PerformingPhysicianName",&ord[6]));
+			einf.push_back(instyp(pm.My->DBS,"TransducerData",&ord[tdnr]));
+			einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[8]));
+			struct tm tma={0};
+			strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
+			einf.push_back(instyp(pm.My->DBS,"Aufnahmedatum",&tma));
+			ord[adnr].insert(8,"_");
+			svec eindfeld;
+			eindfeld<<"PatientName";
+			eindfeld<<"Geburtsdatum";
+			eindfeld<<"PatientID";
+			eindfeld<<"Aufnahmedatum";
+			int ZDB=0;
+			rins.tbins(tbn,einf,aktc,/*sammeln=*/0,/*obverb=*/ZDB,&id,/*eindeutig=*/0,eindfeld);
+			Log("ID: '"+violetts+id+schwarz+"'",pm.obverb,pm.oblog);
+} // void datcl::inDB(paramcl& pm., const int& aktc)
+
+
+datcl::datcl(string& name): name(name)
+{
 }
+
+void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
+{
+			for(unsigned j=0;j<dim;j++) {
+				if (j!=itnr && j!=rpnr) {
+					bname+=ord[j];
+					if (j<dim-1) bname+='_';
+				} // 			if (j!=itnr && j!=rpnr)
+			} // 		for(int j=0;j<dim;j++)
+			if (id.empty()) {
+				Log(rots+bname+schwarz+" schon da!",pm.obverb,pm.oblog);
+			} else {
+				string neuname=pm.zvz+"/"+bname+".png";
+				systemrueck("dcmj2pnm +on2 '"+name+"' > '"+neuname+"'",pm.obverb,pm.oblog);
+				struct stat nst={0};
+				if (!lstat(neuname.c_str(),&nst)) {
+					struct tm tm={0};
+					strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tm);
+					tm.tm_isdst=-1;
+					time_t modz=mktime(&tm);
+					struct utimbuf ub={0};
+					ub.modtime=modz;
+					ub.actime=modz;
+					if (utime(neuname.c_str(),&ub)) {
+						Log(rots+"Fehler beim Datumsetzen von '"+blau+neuname+schwarz,pm.obverb,pm.oblog);
+					}
+					systemrueck("chown sturm:praxis '"+neuname+"'",pm.obverb,pm.oblog);
+					const string jahr=ord[adnr].substr(0,4);
+					string cmd="cp -a '"+neuname+"' '"+pm.z2vz+"/"+jahr+"/'";
+					systemrueck(cmd,pm.obverb,pm.oblog);
+				} else {
+					RS weg(pm.My,"DELETE FROM `"+tbn+"` WHERE ID="+id,aktc,ZDB);
+				}
+				//		systemrueck("touch -r '"+rueck[nr]+"' '"+neuname+"'",pm.obverb,pm.oblog); // = zu spaet
+				if (gibaus)
+					Log(bname,pm.obverb,pm.oblog);
+				Log("Nr: "+blaus+ltoan(nr)+schwarz+", "+blau+name+schwarz+" "+blau+(ir.size()?ir[0]:"")+schwarz,pm.obverb,pm.oblog);
+			}
+}
+
+// Musterfunktion, die von einer Funktion in gesonderter,fakultativer Datei,z.B. 'vgb.cpp' ueberschrieben werden kann
+void paramcl::VorgbSpeziell() 
+{
+	Log(violetts+Tx[T_VorgbSpeziell]+schwarz);
+} // void paramcl::VorgbSpeziell() 
+
+void paramcl::verschieb()
+{
+		time_t jetzt;
+		time(&jetzt);
+		struct tm *jtp;
+		jtp=localtime(&jetzt);
+		char zbuf[16];
+		strftime(zbuf,16,"%Y%m%d_%H%M%S",jtp);
+		const string nvz=avz+vtz+zbuf;
+		pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
+		const string cmd="mv -n '"+qvz+vtz+"'* '"+nvz+vtz+"'";
+		systemrueck(cmd,obverb,oblog);
+		ret=0;
+} // void paramcl::verschieb()
+
+int main(int argc, char** argv)
+{
+	paramcl pm(argc,argv); // Programmparameter
+	pm.getcommandl0(); // anfangs entscheidende Kommandozeilenparameter abfragen
+	pm.obverb=1;
+	pm.oblog=0;
+	linst_cl linst(pm.obverb,pm.oblog);
+	pm.linstp=&linst;
+	pm.VorgbSpeziell();//die Vorgaben, die in einer zusaetzlichen Datei mit einer weiteren Funktion "void paramcl::VorgbSpeziell()" ueberladbar sind
+	const int aktc=0;
+	linstp=&linst;
+	//	pruefverz(zvz,obverb,0,1,1,"sturm","sturm");
+	if (pm.initDB())
+		return 10;
+	if (!pm.My) exit(5); // Datenbankverbindung nicht erstellbar
+	pm.pruefdictab(aktc);
+	svec rueck;
+	systemrueck("find "+pm.qvz+" -type f -not -path '*\\.*' -not -path '*DICOMDIR*'",pm.obverb,pm.oblog,&rueck);
+	if (!rueck.size()) {
+	 Log(rots+"Keine Dateien in '"+blau+pm.qvz+rot+"' gefunden!",1,0);
+	 pm.ret=1;
+	} else {
+		for(size_t nr=0;nr<rueck.size();nr++) {
+			datcl dat(rueck[nr]);
+			dat.inDB(pm,aktc);
+			dat.aufPlatte(pm,aktc,nr);
+		} // 	for(size_t nr=0;nr<rueck.size();nr++)
+		pm.verschieb();
+	} // 	if (!rueck.size())
+	return pm.ret;
+} // int main(int argc, char** argv)

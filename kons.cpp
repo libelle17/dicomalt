@@ -500,8 +500,7 @@ int perfcl::oberreicht(unsigned long sek)
 
 string ersetzefuerdatei(const string& u) 
 {
-  static string ziel;
-  ziel =u;
+  string ziel=u;
   ersetzAlle(&ziel,"*","");
   ersetzAlle(&ziel,":",".");
   return ziel;
@@ -1029,18 +1028,14 @@ int Log(const short screen,const short file, const bool oberr,const short klobve
 #ifdef vagenau		
 		va_list a2;
 		va_copy(a2,args);
-		pthread_mutex_lock(&printf_mutex);
 		auto groe=vsnprintf(0,0,format,a2)+1;
-		pthread_mutex_unlock(&printf_mutex);
 		//<<"groe: "<<groe<<endl;
 		char *buf=new char[groe];
 #else // vagenau
 		int groe=512; 
 		char buf[groe];
 #endif // vagenau	else
-		pthread_mutex_lock(&printf_mutex);
 		vsnprintf(buf,groe,format,args);
-		pthread_mutex_unlock(&printf_mutex);
 		erg=Log(buf,screen,file);
 #ifdef vagenau
 		delete buf;
@@ -1233,7 +1228,7 @@ perf2= static_cast<double> (perfEnd.tv_sec * 1000000 + perfEnd.tv_usec- perfStar
 }    // long cmpmem( char* feld, const char* search, int len_feld) // , int len_search
 
 
-char* ltoan(long value, int base, uchar obtz, uchar minstel) 
+string ltoan(long value, int base, uchar obtz, uchar minstel) 
 {
   /**
    * C++ version 0.4 char* style "itoa":
@@ -1241,32 +1236,33 @@ char* ltoan(long value, int base, uchar obtz, uchar minstel)
    * Released under GPLv3.
    */
   const uchar resultlenge=30;
-  static char result[resultlenge];
+  char result[resultlenge];
   // check that the base is valid
-  if (base < 2 || base > 36) { *result = '\0'; return result; }
+	if (base < 2 || base > 36) { 
+		*result = '\0'; 
+	} else {
+		char* ptr = result, *ptr1 = result, tmp_char;
+		long tmp_value;
+		uchar stelle=0,stellen=0;
+		do {
+			tmp_value = value;
+			value /= base;
+			*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
+			stellen++;
+			if (obtz) if (value) if (++stelle==3) {*ptr++ ='.';stelle=0;stellen++;}
+		} while ( value );
+		while (stellen++<minstel && stellen<resultlenge) *ptr++ = ' ';
 
-  char* ptr = result, *ptr1 = result, tmp_char;
-  long tmp_value;
-
-  uchar stelle=0,stellen=0;
-  do {
-    tmp_value = value;
-    value /= base;
-    *ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
-    stellen++;
-    if (obtz) if (value) if (++stelle==3) {*ptr++ ='.';stelle=0;stellen++;}
-  } while ( value );
-  while (stellen++<minstel && stellen<resultlenge) *ptr++ = ' ';
-
-  // Apply negative sign
-  if (tmp_value < 0) *ptr++ = '-';
-  *ptr-- = '\0';
-  while(ptr1 < ptr) {
-    tmp_char = *ptr;
-    *ptr--= *ptr1;
-    *ptr1++ = tmp_char;
-  } //   while(ptr1 < ptr)
-  return result;
+		// Apply negative sign
+		if (tmp_value < 0) *ptr++ = '-';
+		*ptr-- = '\0';
+		while(ptr1 < ptr) {
+			tmp_char = *ptr;
+			*ptr--= *ptr1;
+			*ptr1++ = tmp_char;
+		} //   while(ptr1 < ptr)
+	} //   if (base < 2 || base > 36)
+  return string(result);
 } // ltoan(long value, char* result, int base)
 
 char* ltoa_(long value, char* result, int base=10) 
@@ -2106,9 +2102,7 @@ int Schschreib(const char *fname, Schluessel *conf, size_t csize)
   FILE *f=oeffne(fname,3,&erfolg);
   if (!erfolg) return 1;
   for (size_t i = 0;i<csize;i++) {
-		pthread_mutex_lock(&printf_mutex);
     fprintf(f,"%s = \"%s\"\n",conf[i].key,conf[i].val);
-		pthread_mutex_unlock(&printf_mutex);
   } // 	for (size_t i = 0;i<csize;i++)
   fclose(f);
 #endif // obfstream else
@@ -2738,9 +2732,7 @@ string aktprogverz()
 	if(bytes == 0) pBuf[0]=0;
 #elif linux
 	char szTmp[32];
-	pthread_mutex_lock(&printf_mutex);
 	sprintf(szTmp, "/proc/%d/exe", getpid());
-	pthread_mutex_unlock(&printf_mutex);
 	ssize_t bytes = MIN(readlink(szTmp, pBuf, sizeof pBuf), sizeof pBuf - 1);
 	if(bytes >= 0) pBuf[bytes] = 0;
 #endif
@@ -2865,7 +2857,8 @@ string Tippzahl(const string& frage, const string *vorgabe)
 }
 long Tippzahl(const string& frage,const long& vorgabe)
 {
-	return atol(Tippzahl(frage.c_str(),ltoan(vorgabe)).c_str());
+	string vgb=ltoan(vorgabe);
+	return atol(Tippzahl(frage.c_str(),&vgb).c_str());
 }
 /*//
 char* Tippcstr(const char *frage, char* buf, unsigned long buflen, const char* vorgabe) 
@@ -4242,9 +4235,7 @@ void printBits(size_t const size, void const * const ptr)
   for (i=size-1;i>=0;i--) {
     for (j=7;j>=0;j--) {
       byte = (b[i] >> j) & 1;
-			pthread_mutex_lock(&printf_mutex);
 			printf("%u", byte);
-			pthread_mutex_unlock(&printf_mutex);
 		} //     for (j=7;j>=0;j--)
   } //   for (i=size-1;i>=0;i--)
 } // void printBits(size_t const size, void const * const ptr)
@@ -4579,6 +4570,7 @@ int find3cl::dofind()
 int find3cl::ausgeb()
 {
 	size_t j=0;
+	// zum Schutz vor gemischten Ausgaben
 	pthread_mutex_lock(&printf_mutex);
 	for(set<elem3>::iterator jt=erg.begin();jt!=erg.end();jt++) {
 		j++;
@@ -4749,9 +4741,20 @@ const string& defnachs="/archive/master.tar.gz";
 
 haupt::haupt()
 {
+	pthread_mutex_init(&printf_mutex, NULL);
+	pthread_mutex_init(&getmutex, NULL);
 	mpfad=meinpfad();
 	meinname=base_name(mpfad); // argv[0];
 	pruefinstv();
+#ifdef _WIN32
+	logvz = "C:\\Dokumente und Einstellungen\\All Users\\Anwendungsdaten";
+#elif linux
+	logvz = "/var/log";
+#endif
+	logdname = meinname+".log";
+	loggespfad=logvz+vtz+logdname;
+	logdt=&loggespfad.front();
+	pruefplatte(); // geht ohne Logaufruf, falls nicht #define systemrueckprofiler
 } // haupt::haupt()
 
 // wird aufgerufen in paramcl::paramcl, pruefunpaper, holvomnetz, kompilbase, kompilfort
@@ -4764,7 +4767,6 @@ int haupt::pruefinstv()
 	////	KLZ // 	if (instvz.empty()) 
 	return erg;
 } // void paramcl::pruefinstv()
-
 
 
 int haupt::holvomnetz(const string& datei,const string& vors/*=defvors*/,const string& nachs/*=defnachs*/)
@@ -4849,7 +4851,7 @@ int haupt::kompiliere(const string& was,const string& endg, const string& vorcfg
 void haupt::zeigversion()
 {
 	struct tm tm={0};
-	char buf[100]={0};
+	char buf[100];
 	cout<<endl<<Txk[T_Programm]<<violett<<mpfad<<schwarz<<endl;
 	cout<<"Copyright: "<<blau<<Txk[T_Freie_Software]<<schwarz<<Txk[T_Verfasser]<<blau<<"Gerald Schade"<<schwarz<<endl;
 	cout<<"Version: "<<blau<<versnr<<schwarz<<endl;
@@ -4952,19 +4954,6 @@ void haupt::lgnzuw()
 		Txk.lgn=deutsch;
 	} // 	if (langu=="d" || langu=="D" || langu=="deutsch" || langu=="Deutsch") else else
 } // void haupt::lgnzuw()
-
-// wird aufgerufen in: main
-void haupt::logvorgaben()
-{
-#ifdef _WIN32
-	logvz = "C:\\Dokumente und Einstellungen\\All Users\\Anwendungsdaten";
-#elif linux
-	logvz = "/var/log";
-#endif
-	logdname = meinname+".log";
-	loggespfad=logvz+vtz+logdname;
-	logdt=&loggespfad.front();
-} // void paramcl::logvorgaben
 
 int haupt::Log(const string& text,const bool oberr/*=0*/,const short klobverb/*=0*/) const
 {

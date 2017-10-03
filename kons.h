@@ -131,7 +131,7 @@ enum {
 
 #define caus cout // nur zum Debuggen
 #define exitt exit // fuer threads
-extern pthread_mutex_t printf_mutex;
+extern pthread_mutex_t getmutex, printf_mutex;
 extern const string devtty;
 
 typedef unsigned long long ull;
@@ -516,7 +516,7 @@ void fuersamba(string& roh);
 size_t zahlin(const string *const str, const char* const was);
 long cmpmem( char* feld, const char* search, int len_feld); // , int len_search
 // fuer lies (Konfigurationsdatei lesen)
-char* ltoan(long value, int base=10, uchar obtz=0, uchar minstel=0); 
+string ltoan(long value, int base=10, uchar obtz=0, uchar minstel=0); 
 char* ltoa_(long value, char* result, int base); 
 void anfgw(const string& datei, const string& udpr, const string& inhalt, const string& comment, int obverb/*=0*/, int oblog/*=0*/);
 void anfgg(const string& datei, const string& inhalt, const string& comment, int obverb/*=0*/, int oblog/*=0*/);
@@ -1101,7 +1101,6 @@ class haupt
 	public:
 		haupt();
 		int Log(const string& text,const bool oberr=0,const short klobverb=0) const;
-    void logvorgaben();
     int pruefinstv();
     void lieskonfein();
 		void setzlog();

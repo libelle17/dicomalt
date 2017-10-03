@@ -152,7 +152,11 @@ blau::="\033[1;34m"
 reset::="\033[0m"
 
 MANV::=/usr/share/man
+ifeq ('$(wildcard man_en)','')
+INSTenMAN::=
+else
 INSTenMAN::=$(MANV)/man1/$(DPROG).1.gz
+endif
 _MAN::=$(subst man_en,,$(wildcard man_??))
 FLANGS::=$(patsubst man_%,%,$(_MAN))
 INST_MAN::=$(patsubst man_%,$(MANV)/%/man1/$(DPROG).1.gz,$(_MAN))
