@@ -188,11 +188,11 @@ void datcl::inDB(paramcl& pm,const int& aktc)
 									ord[j]=roh;
 									fehltzahl--;
 									gibaus=1;
-								}
-							}
-						}
-					}
-				}
+								} // 								if (p2!=string::npos)
+							} // 							if (p1!=string::npos)
+						} // 						if (ir[zl].find(knz[j])!=string::npos)
+					} // 					if (ord[j].empty())
+				} // 				for(unsigned j=0;j<dim;j++)
 				if (!fehltzahl) break;
 			} // 	for(size_t zl=0;zl<ir.size();zl++)
 			RS rins(pm.My);
