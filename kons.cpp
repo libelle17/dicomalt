@@ -2377,6 +2377,7 @@ void pruefmehrfach(const string& wen,uchar obstumm/*=0*/)
 	*/
 } // void pruefmehrfach(char* ich)
 
+// aufgerufen in: setfaclggf, pruefber, pruefverz
 int untersuser(const string& uname,__uid_t *uidp/*=0*/, __gid_t *gidp/*=0*/,vector<gid_t> *gids/*=0*/,struct passwd* ustr/*=0*/)
 {
 	struct passwd pwd={0};
@@ -5260,3 +5261,30 @@ void haupt::update(const string& DPROG)
 				 1,oblog,/*rueck=*/0,/*obsudc=*/0);
 	} // if (systemrueck ... else
 } // void haupt::update(const string& DPROG)
+
+const string	haupt::passwddt="/etc/passwd";
+
+void haupt::setzbenutzer(string *user)
+{
+	cmd="cat "+passwddt+" | grep /home/ | cut -d':' -f 1";
+	systemrueck(cmd,obverb,oblog,&benutzer,/*obsudc=*/0);
+	if (benutzer.size()>1) for(size_t i=benutzer.size();i;) {
+		--i;
+		if (benutzer[i]=="syslog"||benutzer[i]=="ntp") {
+			benutzer.erase(benutzer.begin()+i);
+		}
+	} // for(size_t i=benutzer.size();i;)
+	for(size_t i=0;i<benutzer.size();i++) {
+		////          bliste+=benutzer[i];
+		////          if (i<benutzer.size()-1) bliste+=",";
+		if (user->empty()) *user=benutzer[i]; // Vorgabe
+	} // 			for(size_t i=0;i<benutzer.size();i++) 
+	/*//
+		const string Frage=string("Linux-Benutzer fuer Capisuite (")+bliste+"):";
+		do KLA
+		tmpcuser=Tippstr(Frage.c_str(),user);
+		KLZ while (benutzer.size() && bliste.find(tmpcuser)==string::npos && 
+		tmpcuser.find(',')==string::npos); // nur vorhandene User akzeptieren
+		*user=tmpcuser;
+	 */
+}

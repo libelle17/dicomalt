@@ -279,6 +279,11 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 void paramcl::VorgbSpeziell() 
 {
 	Log(violetts+Tx[T_VorgbSpeziell]+schwarz);
+	setzbenutzer(&duser);
+	qvz="/var/spool/dicomneu";
+	avz="/var/spool/dicomalt";
+	zvz="/var/spool/dicomziel";
+	z2vz="/var/spool/dicomziel2";
 } // void paramcl::VorgbSpeziell() 
 
 void paramcl::verschieb()

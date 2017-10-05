@@ -1060,6 +1060,7 @@ class haupt
 		uchar cmeingegeben=0;
 		uchar crongeprueft=0;
 		static const string edit;
+		static const string passwddt;
 	public:
     int obverb=0; // verbose
     int oblog=0;  // mehr Protokollieren
@@ -1093,6 +1094,7 @@ class haupt
 		string zsaufr[2]; // zitiert saufr (in sed)
 		string vorcm; // Vor-Cron-Minuten
 		linst_cl* linstp=0;
+		vector<string> benutzer; // Benutzer aus /etc/passwd, bearbeitet durch setzbenutzer(&user)
 	protected:
     virtual void lgnzuw(); // in vorgaben, lieskonfein, getcommandl0, getcommandline, rueckfragen
 		void setztmpcron();
@@ -1123,4 +1125,5 @@ class haupt
 		void dodovi(const svec d1,const svec d2);
 		void schlussanzeige();
 		void update(const string& DPROG);
+		void setzbenutzer(string *user);
 }; // class haupt
