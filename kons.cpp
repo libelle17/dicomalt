@@ -5262,7 +5262,10 @@ void haupt::update(const string& DPROG)
 	} // if (systemrueck ... else
 } // void haupt::update(const string& DPROG)
 
-const string	haupt::passwddt="/etc/passwd";
+const string	haupt::passwddt="/etc/passwd",
+			haupt::groupdt="/etc/group",
+			haupt::sudoersdt="/etc/sudoers";
+
 
 void haupt::setzbenutzer(string *user)
 {

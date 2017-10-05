@@ -1060,7 +1060,7 @@ class haupt
 		uchar cmeingegeben=0;
 		uchar crongeprueft=0;
 		static const string edit;
-		static const string passwddt;
+		static const string passwddt, groupdt, sudoersdt;
 	public:
     int obverb=0; // verbose
     int oblog=0;  // mehr Protokollieren
