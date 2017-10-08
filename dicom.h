@@ -25,22 +25,46 @@ class datcl
 class paramcl: public haupt // Programmparameter 
 {
 	public:
-	DB *My=0;
-	string duser; // ="sturm";
-	string qvz; // ="/DATA/Patientendokumente/HDneu";
-	string avz; // ="/DATA/Patientendokumente/HDalt";
-	string zvz; // ="/DATA/Patientendokumente/test";
-	string z2vz; // ="/DATA/Patientendokumente/eingelesen";
+		const int aktc=0;
+    string host="localhost";  // fuer MySQL/MariaDB
+    string muser; // Benutzer fuer Mysql/MariaDB
+    string mpwd;  // Passwort fuer Mysql/MariaDB
+		uchar autoupd;  // 1=Programm automatisch updadaten
+		DB *My=0;
+    string dbn; // Datenbank
+    string tbn; // Tabellenname
+		string findvers; // find-Version (1=linux fund 2=intern mit readdir, 3=intern mit nftw 
+		int ifindv; // integer-Variante der find-Version
+		string duser; // ="sturm";
+		string qvz; // Quellverzeichnis // ="/DATA/Patientendokumente/HDneu";
+		string avz; // Verzeichnis alter Übertragungen // ="/DATA/Patientendokumente/HDalt";
+		string zvz; // Zielverzeichnis // ="/DATA/Patientendokumente/test";
+		string z2vz; // 2. Zielverzeichnis // ="/DATA/Patientendokumente/eingelesen";
+    string suchstr;  // Wortteil, nach dem in alten Uebertragungen gesucht werden soll
+		uchar keineverarbeitung=0; // wenn cronminuten geaendert werden sollen, vorher abkuerzen
+    uchar obvi=0;   // ob Konfigurationsdatei editiert werden soll
+		uchar obvs=0;   // ob Quelldateien bearbeitet werden sollen
+    uchar anhl=0;    // <DPROG> anhalten
 		int ret=0; // Rueckgabewert
 	public:
-		paramcl(const int argc, const char *const *const argv);
+		paramcl(const int argc, const char *const *const argv,const int obverb=0, const int oblog=0);
+    void pruefggfmehrfach();
 		void getcommandl0();
+    void rufpruefsamba();
 		int  initDB();
-		void pruefdictab(int aktc);
-    #ifdef DPROGcpp
-    void VorgbSpeziell() __attribute__((weak)); // implementationsspezifische Vorgaben (aber nur Quellcodeaenderung aenderbar, Modul vgb.cpp)
-    #else // DPROGcpp
-    void VorgbSpeziell(); // implementationsspezifische Vorgaben (aber nur Quellcodeaenderung aenderbar, Modul vgb.cpp)
-    #endif // DPROGcpp else
+		void pruefdictab(const int aktc);
+    void autofkonfschreib();
+		void MusterVorgb();
+		void VorgbSpeziell() 
+#ifdef DPROGcpp
+			__attribute__((weak)) // implementationsspezifische Vorgaben (aber nur Quellcodeaenderung aenderbar, Modul vgb.cpp)
+#endif // DPROGcpp
+			;
+		void lieskonfein();
+		int  getcommandline();
+		void rueckfragen();
 		void verschieb();
+		void zeigdienste();
+		void pruefdcmj();
+		void verzeichnisse();
 }; // class paramcl

@@ -169,6 +169,7 @@ string meinpfad();
 
 enum Tkons_ 
 {
+	T_j_af,
   T_pfad,
   T_kuerze_logdatei,
   T_Logdatei,
@@ -347,6 +348,20 @@ enum Tkons_
 	T_warte,
 	T_wird_aktualisiert_bitte_ggf_neu_starten,
 	T_muss_nicht_aktualisiert_werden,
+	T_confdat_lies_Datei,
+	T_confdat_lies_Erfolg,
+	T_confdat_lies_Misserfolg,
+	T_pruefsamba,
+	T_Samba_muesste_installiert_werden_soll_ich,
+	T_Sollen_fehlende_Sambafreigaben_fuer_die_angegebenen_Verzeichnisse_ergaenzt_werden,
+	T_Passwort_fuer_samba,
+	T_Firewallport,
+	T_offen,
+	T_zu,
+	T_Soll_die_SuSEfirewall_bearbeitet_werden,
+	T_Verzeichnis,
+	T_nicht_als_Sambafreigabe_gefunden_wird_ergaenzt_in,
+	T_fuer_Benutzer,
 	T_konsMAX
 };
 
@@ -826,9 +841,9 @@ string Tippzahl(const char *frage, const char *vorgabe=0);
 string Tippzahl(const char *frage, const string *vorgabe);
 string Tippzahl(const string& frage, const string *vorgabe);
 long Tippzahl(const string& frage,const long& vorgabe);
-string Tippstr(const char *frage, const string *vorgabe=0);
+string Tippstr(const char *frage, const string *vorgabe=0,const uchar obnichtleer=1);
 // char* Tippcstr(const char *frage, char* buf, unsigned long buflen, const char* vorgabe=nix);
-string Tippstr(const string& frage, const string *vorgabe=0);
+string Tippstr(const string& frage, const string *vorgabe=0,const uchar obnichtleer=1);
 string Tippverz(const char *frage,const string *vorgabe=0);
 uchar VerzeichnisGibts(const char* vname);
 int tuloeschen(const string& zuloe,const string& cuser=nix,int obverb=0, int oblog=0,stringstream *ausgp=0);
@@ -1061,6 +1076,7 @@ class haupt
 		uchar crongeprueft=0;
 		static const string edit;
 		static const string passwddt, groupdt, sudoersdt;
+		static const char* const smbdt;// "/etc/samba/smb.conf"
 	public:
     int obverb=0; // verbose
     int oblog=0;  // mehr Protokollieren
@@ -1102,27 +1118,30 @@ class haupt
 		void vischluss(string& erg);
 	public:
 		haupt();
+		~haupt();
 		int Log(const string& text,const bool oberr=0,const short klobverb=0) const;
     int pruefinstv();
     void lieskonfein();
 		void setzlog();
-		#ifdef immerwart
+		void pruefsamba(const vector<const string*>& vzn,const svec& abschni,const svec& suchs,const char* DPROG,const string& cuser);
+#ifdef immerwart
 		void lieszaehlerein(ulong *arp=0,ulong *tap=0,ulong *map=0,struct tm *lap=0, string *obempfp=0,string *obgesap=0,const uchar obstumm=0);
 		void schreibzaehler(const string* obempfp=0, const string* obgesap=0);
-		#else // immerwart
+#else // immerwart
 		void lieszaehlerein(ulong *arp=0,ulong *tap=0,ulong *map=0,struct tm *lap=0, const uchar obstumm=0);
 		void schreibzaehler();
-		#endif // immerwart
+#endif // immerwart
 		void setzzaehler();
 		int holvomnetz(const string& datei,const string& vors=defvors,const string& nachs=defnachs);
-    int kompilbase(const string& was,const string& endg);
-    int kompiliere(const string& was,const string& endg,const string& vorcfg=nix,const string& cfgbismake=s_dampand);
+		int kompilbase(const string& was,const string& endg);
+		int kompiliere(const string& was,const string& endg,const string& vorcfg=nix,const string& cfgbismake=s_dampand);
 		int kompilfort(const string& was,const string& vorcfg=nix,const string& cfgbismake=s_dampand,uchar ohneconf=0);
 		void zeigversion();
-    void zeigkonf();
+		void zeigkonf();
 		void gcl0();
 		uchar pruefcron();
 		void dodovi(const svec d1,const svec d2);
+		void dovi();
 		void schlussanzeige();
 		void update(const string& DPROG);
 		void setzbenutzer(string *user);

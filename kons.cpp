@@ -77,6 +77,8 @@ const char* sprachcstr=&sprachstr.front();
 const char *kons_T[T_konsMAX+1][SprachZahl]=
 {
   ////Ctp Txkonscl::TextC=KLA
+	// T_j_af,
+	{"j","y"},
   // T_pfad,
   {"pfad","path"},
   // T_kuerze_logdatei,
@@ -434,6 +436,35 @@ const char *kons_T[T_konsMAX+1][SprachZahl]=
 	{" wird aktualisiert, bitte ggf. neu starten."," will be updated, please start it again if needed."},
 	// T_muss_nicht_aktualisiert_werden
 	{" muss nicht aktualisiert werden."," needs not to be updated."},
+	// T_confdat_lies_Datei
+	{"confdat::lies(), Datei: ","confdat::read(), file: "},
+	// T_confdat_lies_Erfolg
+	{"confdat::lies() Erfolg","confdat::read(), success"},
+	// T_confdat_lies_Misserfolg
+	{"confdat::lies() Misserfolg","confdat::read(), failure"},
+	// T_pruefsamba
+	{"pruefsamba()","checksamba()"},
+	// T_Samba_muesste_installiert_werden_soll_ich
+	{"Samba muesste installiert werden, soll ich?","samba needs to be installed, shall I?"},
+	// T_Sollen_fehlende_Sambafreigaben_fuer_die_angegebenen_Verzeichnisse_ergaenzt_werden
+	{"Sollen fehlende Sambafreigaben fuer die angegebenen Verzeichnisse ergaenzt werden?",
+		"Shall missing samba shares for the specified directories be added?"},
+	// T_Passwort_fuer_samba
+	{"Passwort fuer samba ","Password for samba "},
+	// T_Firewallport
+	{"Firewallport ","Firewall port "},
+	// T_offen
+	{" offen"," open"},
+	// T_zu
+	{" zu"," shut"},
+	// T_Soll_die_SuSEfirewall_bearbeitet_werden
+	{"Soll die SuSEfirewall2 bearbeitet werden?","Shall the SuSEfirewall2 be edited?"},
+	// T_Verzeichnis
+	{"Verzeichnis '","Directory '"},
+	// T_nicht_als_Sambafreigabe_gefunden_wird_ergaenzt_in
+	{"' nicht als Sambafreigabe gefunden, wird ergaenzt in '","' not found as or under a samba share, amending it in '"},
+	// T_fuer_Benutzer
+	{" fuer Benutzer '"," for user '"},
   {"",""}
 }; // const char *Txkonscl::TextC[T_konsMAX+1][SprachZahl]=
 
@@ -1039,6 +1070,7 @@ int Log(const short screen,const short file, const bool oberr,const short klobve
 		erg=Log(buf,screen,file);
 #ifdef vagenau
 		delete buf;
+		buf=0;
 #endif // vagenau
 		va_end(args);
 	} // 	if (screen||file)
@@ -1656,21 +1688,29 @@ const string& absch::suche(const string& sname)
 // Achtung: Wegen der Notwendigkeit zur Existenz der Datei zum Aufruf von setfacl kann die Datei erstellt werden!
 int confdat::lies(const string& fname, int obverb)
 {
-  string zeile;
-  if (fname.empty()) 
-    return 2;
-  mdatei f(fname,ios::in);
-  if (f.is_open()) {
-    if (obverb>0) cout<<"confdat::lies(fname...), fname: "<<blau<<fname<<schwarz<<endl;
-    while (getline(f,zeile)) {
-      zn<<zeile;
-    }
-    obgelesen=1;
-		if (obverb>0) cout<<"confdat::lies fertig 0"<<endl;
-    return 0;
-  }
-	if (obverb>0) cout<<"confdat::lies fertig 1"<<endl;
-	return 1;
+	int erg=0;
+	if (fname.empty()) {
+		erg=2;
+	} else {
+		mdatei f(fname,ios::in);
+		if (f.is_open()) {
+			if (obverb>0) cout<<Txk[T_confdat_lies_Datei]<<blau<<fname<<schwarz<<endl;
+			string zeile;
+			while (getline(f,zeile)) {
+				zn<<zeile;
+			}
+			obgelesen=1;
+		} else {
+			erg=1;
+		} //   if (f.is_open())
+	} // 	if (fname.empty())
+	if (obverb>0) {
+		if (erg)
+			cout<<Txk[T_confdat_lies_Misserfolg]<<endl;
+		else
+			cout<<Txk[T_confdat_lies_Erfolg]<<endl;
+	} // 	if (obverb>0) {
+	return erg;
 } // lies(const string& fname, int obverb)
 
 void absch::clear()
@@ -2307,7 +2347,7 @@ int systemrueck(const string& cmd, char obverb/*=0*/, int oblog/*=0*/, vector<st
 	if (obergebnisanzeig && rueck->size()) {
 		if (ausgp&&obverb) *ausgp<<smeld<<endl; else Log(smeld,obverb>1||(ob0heissterfolg && erg && obergebnisanzeig>1),oblog);
 	} // 	if (obergebnisanzeig && rueck->size())
-	if (neurueck) delete rueck;
+	if (neurueck) {delete rueck;rueck=0;}
   return erg; 
 } // int systemrueck(const string& cmd, char obverb, int oblog, vector<string> *rueck, binaer ...
 
@@ -2841,7 +2881,7 @@ string Tippzahl(const char *frage, const char *vorgabe)
     input.clear();
     getline(cin,input);
     if (cin.fail()) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); }
-    if (input.empty() && vorgabe) {input=vorgabe;break;}
+    if (input.empty() && vorgabe && *vorgabe) {input=vorgabe;break;}
     if (isnumeric(input)) break;
   } //   while(1)
 	pthread_mutex_unlock(&getmutex);
@@ -2870,12 +2910,12 @@ char* Tippcstr(const char *frage, char* buf, unsigned long buflen, const char* v
   return buf;
 } // Tippcstr
 */
-string Tippstr(const char *frage, const string *vorgabe) 
+string Tippstr(const char *frage, const string *vorgabe,const uchar obnichtleer/*=1*/) 
 {
-  return Tippstr(string(frage), vorgabe);
+  return Tippstr(string(frage), vorgabe,obnichtleer);
 } // Tippstr
 
-string Tippstr(const string& frage, const string *vorgabe) 
+string Tippstr(const string& frage, const string *vorgabe,const uchar obnichtleer/*=1*/) 
 {
   string input;
 	pthread_mutex_lock(&getmutex);
@@ -2884,12 +2924,13 @@ string Tippstr(const string& frage, const string *vorgabe)
     input.clear();
     getline(cin,input);
     if (cin.fail()) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); }
-    if (input.empty() && vorgabe) {
-     input=*vorgabe;
-     break;
-    } //     if (input.empty() && vorgabe)
-    break;
-  } //   while(1)
+		if (input.empty()) if (vorgabe) input=*vorgabe;
+		if (input.empty()) {
+			if (!obnichtleer) break;
+		} else { 
+			break;
+		} // 		if (input.empty())
+	} //   while(1)
 	pthread_mutex_unlock(&getmutex);
 	return input;
 } // Tippstr
@@ -4756,7 +4797,14 @@ haupt::haupt()
 	loggespfad=logvz+vtz+logdname;
 	logdt=&loggespfad.front();
 	pruefplatte(); // geht ohne Logaufruf, falls nicht #define systemrueckprofiler
+	linstp=new linst_cl(obverb,oblog);
 } // haupt::haupt()
+
+haupt::~haupt()
+{
+	delete linstp;
+	linstp=0;
+}
 
 // wird aufgerufen in paramcl::paramcl, pruefunpaper, holvomnetz, kompilbase, kompilfort
 int haupt::pruefinstv()
@@ -4767,7 +4815,7 @@ int haupt::pruefinstv()
 	erg=pruefverz(instvz,obverb,oblog);
 	////	KLZ // 	if (instvz.empty()) 
 	return erg;
-} // void paramcl::pruefinstv()
+} // void haupt::pruefinstv()
 
 
 int haupt::holvomnetz(const string& datei,const string& vors/*=defvors*/,const string& nachs/*=defnachs*/)
@@ -4961,6 +5009,230 @@ int haupt::Log(const string& text,const bool oberr/*=0*/,const short klobverb/*=
 	return ::Log(text,obverb,oblog,oberr,klobverb);
 } // int haupt::Log(const string& text,bool oberr/*=0*/,short klobverb/*=0*/)
 
+void haupt::dovi()
+{
+	svec d1, d2;
+	d1<<smbdt;
+	d2<<passwddt;
+	d2<<groupdt;
+	d2<<sudoersdt;
+	dodovi(d1,d2);
+} // void haupt::dovi()
+
+const char* const haupt::smbdt="/etc/samba/smb.conf";
+// wird aufgerufen in: main
+void haupt::pruefsamba(const vector<const string*>& vzn,const svec& abschni,const svec& suchs, const char* DPROG,const string& cuser)
+{
+	Log(violetts+Txk[T_pruefsamba]);
+	int sgest=0, ngest=0;
+	uchar conffehlt=1;
+	const string smbquelle="/usr/share/samba/smb.conf";
+	uchar obinst=0; // ob Samba installiert werden soll bzw. die smb.conf bearbeitet
+	uchar obfw=0; // ob SuSEfirewall bearbeitet werden soll
+	//// <<violett<<"Stelle 0"<<endl;systemrueck("systemctl -n 0 status 'nmbd'",obverb,oblog,/*rueck=*/0,/*obsudc=*/0);
+	linstp->doggfinst("libwbclient0",obverb,oblog);
+	// bei dieser Initialisierung werden nur die Namen zugewiesen
+	servc smb("smb","smbd");
+	servc smbd("smbd","smbd");
+	servc nmb("nmb","nmbd");
+	servc nmbd("nmbd","nmbd");
+	int dienstzahl=2;
+	int obsfehlt=linstp->obfehlt("samba",obverb,oblog);
+	for(int iru=0;iru<2;iru++) {
+		if (obsfehlt) {
+			if (!nrzf) {
+				obinst=Tippob(Txk[T_Samba_muesste_installiert_werden_soll_ich],Txk[T_j_af]);
+				if (obinst)
+					linstp->doinst("samba",obverb,oblog);
+				////        smbrestart=0;
+			} // if (!nrzf) 
+		} // 	if (obsfehlt)
+		for(uchar iru=0;iru<2;iru++) {
+			struct stat sstat={0};
+			if (!(conffehlt=lstat(smbdt,&sstat))) break;
+			if (iru) break;
+			pruefverz("/etc/samba",obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/0,/*besitzer=*/{},/*benutzer=*/{},/*obmachen=*/0);
+			kopier(smbquelle,smbdt,obverb,oblog);
+		} //   for(uchar iru=0;iru<2;iru++)
+		if (smb.obsvfeh(obverb-1,oblog)) if (smbd.obsvfeh(obverb-1,oblog)) dienstzahl--;
+		if (nmb.obsvfeh(obverb-1,oblog)) if (nmbd.obsvfeh(obverb-1,oblog)) dienstzahl--;
+		if (dienstzahl==2 ||(smb.svfeh!=6 && smbd.svfeh!=6 && nmb.svfeh!=6 && nmbd.svfeh!=6)) { // wenn keine exec-Datei fehlt
+			break;
+		} else {
+			obsfehlt=1;
+		} // if (dienstzahl==2 || ...
+		////  <<rot<<"Dienstzahl: "<<dienstzahl<<endl;
+	} // 	for(int iru=0;iru<2;iru++)
+	if (dienstzahl<2||conffehlt) {
+		for(int aru=0;aru<2;aru++) {
+			if (!smb.svfeh||!smbd.svfeh) {
+				sgest=1;
+			} else {
+				if (smb.svfeh!=1) {
+					sgest=smb.machfit(obverb,oblog);
+				}
+				if (!sgest && smbd.svfeh!=1) {
+					sgest=smbd.machfit(obverb,oblog);
+				} //       if (!smb.svfeh)
+			} // 			if (!smb.svfeh||!smbd.svfeh)
+			if (!nmb.svfeh||!nmbd.svfeh) {
+				ngest=1;
+			} else {
+				if (nmb.svfeh!=1) {
+					ngest=nmb.machfit(obverb,oblog);
+				}
+				if (!ngest && nmbd.svfeh!=1) {
+					ngest=nmbd.machfit(obverb,oblog);
+				} //       if (!nmb.nvfeh)
+			} // 			if (!nmb.svfeh||!nmbd.svfeh)
+			if (sgest&&ngest) break;
+			//// if (!smb.svfeh) if (!smb.obsvfeh(obverb,oblog)) if (!nmb.svfeh) if (!nmb.obsvfeh(obverb,oblog)) break;
+			//// if (!smbd.svfeh) if (!smbd.obsvfeh(obverb,oblog)) if (!nmbd.svfeh) if (!nmbd.obsvfeh(obverb,oblog)) break;
+		} // for(int aru=0;aru<2;aru++) 
+		////    if (gestartet==2) smbrestart=0;
+	} // if (dienstzahl<2 || conffehlt) 
+	struct stat sstat={0};
+	if (!(conffehlt=lstat(smbdt,&sstat))) {
+		confdat smbcd(smbdt,obverb);
+		smbcd.Abschn_auswert(obverb);
+		uchar gef[vzn.size()]; memset(gef,0,vzn.size()*sizeof(uchar));
+		for(size_t i=0;i<smbcd.abschv.size();i++) {
+			if (smbcd.abschv[i].aname!="global") {
+				const string& pfad = smbcd.abschv[i].suche("path");
+				if (!pfad.empty()) {
+					for(unsigned k=0;k<vzn.size();k++) {
+						if (!gef[k]) if (!vzn[k]->empty()) {
+							if (!vzn[k]->find(pfad)) {
+								gef[k]=1;
+							}
+						} // if (!gef[k]) if (!vzn[k]->empty()) 
+					} // for(unsigned k=0;k<sizeof vzn/sizeof *vzn;k++) 
+				} // if (!pfad.empty()) 
+			} // if (smbcd.abschv.aname!="global") 
+		} // for(size_t i=0;i<smbcd.abschv.size();i++) 
+		uchar smbrestart=0;
+		mdatei sapp(smbdt,ios::out|ios::app);
+		if (sapp.is_open()) {
+			string suchstr;
+			for(unsigned k=0;k<vzn.size();k++) {
+				if (!gef[k]) {
+					smbrestart=1;
+					if (!obinst) {
+						obinst=Tippob(Txk[T_Sollen_fehlende_Sambafreigaben_fuer_die_angegebenen_Verzeichnisse_ergaenzt_werden],Txk[T_j_af]);
+						if (!obinst) break;
+					} // 					if (!obinst)
+					::Log(gruens+Txk[T_Verzeichnis]+blau+*vzn[k]+gruen+Txk[T_nicht_als_Sambafreigabe_gefunden_wird_ergaenzt_in]+
+							blau+smbdt+"'."+schwarz,1,oblog);
+					suchstr+=suchs[k];
+					sapp<<"["<<abschni[k]<<"]"<<endl;
+					sapp<<"  comment = "<<meinname<<" "<<abschni[k]<<endl;
+					sapp<<"  path = "<<*vzn[k]<<endl;
+					sapp<<"  directory mask = 0660"<<endl;
+					sapp<<"  browseable = Yes"<<endl;
+					if (!k)
+						sapp<<"  read only = no"<<endl; // zufaxenvz soll beschreibbar sein
+					sapp<<"  vfs objects = recycle"<<endl;
+					sapp<<"  recycle:versions = Yes"<<endl;
+					sapp<<"  recycle:keeptree = Yes"<<endl;
+					sapp<<"  recycle:repository = Papierkorb"<<endl;
+				} // if (!gef[k]) 
+			} // for(unsigned k=0;k<sizeof vzn/sizeof *vzn;k++) 
+			if (!suchstr.empty()) {
+				if (suchstr.length()>1) suchstr.resize(suchstr.size()-2); // das letzte \\| abschneiden
+				// Abschnitt wieder löschen
+				anfgg(unindt,sudc+"sed -i.vor"+DPROG+" '/^[ \\t]/{H;$!d;};x;/"+suchstr+"/d;1d' "+smbdt,"smb.conf: ["+suchstr+"]",obverb,oblog);
+			} // 			if (!suchstr.empty())
+		} // if (sapp.is_open()) 
+		if (!nrzf) {
+			uchar suserda=!systemrueck("pdbedit -L | grep "+cuser+":",obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+			if (!suserda) {
+				string pw1, pw2;
+				while (1) {
+					do {
+						pw1=Tippstr(string(Txk[T_Passwort_fuer_samba])+Txk[T_fuer_Benutzer]+dblau+cuser+schwarz+"'",&pw1);
+					} while (pw1.empty());
+					pw2=Tippstr(string(Txk[T_Passwort_fuer_samba])+Txk[T_fuer_Benutzer]+dblau+cuser+schwarz+"' ("+Txk[T_erneute_Eingabe]+")",&pw2);
+					if (pw1==pw2) break;
+				} //         while (1)
+				systemrueck("smbpasswd -n -a "+cuser,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+				// smbpasswd in /usr/bin, somit wohl aus crontab aufrufbar
+				systemrueck("(echo "+pw1+";echo "+pw2+")|"+sudc+"smbpasswd -s "+cuser,obverb,oblog,/*rueck=*/0,/*obsudc=*/0);
+			} // if (!suserda)
+		} // if (!nrzf)
+		if (smbrestart) {
+			////		<<"smb.svfeh: "<<(int)smb.svfeh<<endl;
+			if (smb.startbar()) smb.restart(obverb-1,oblog);
+			else if (smbd.startbar()) smbd.restart(obverb-1,oblog);
+			if (nmb.startbar()) nmb.restart(obverb-1,oblog);
+			else if (nmbd.startbar()) nmbd.restart(obverb-1,oblog);
+		} // if (smbrestart) 
+		// VFS
+		if (linstp->ipr==apt) linstp->doggfinst("samba-vfs-modules",obverb,oblog);
+		// Firewall(s)
+		uchar obslaeuft=0;
+		svec rueckr;
+		systemrueck("systemctl list-units|grep firewall|grep -v init",obverb,oblog,&rueckr,/*obsudc=*/0);
+		if (rueckr.size()) if (rueckr[0].find("active running")!=string::npos ||rueckr[0].find("active exited")!=string::npos) obslaeuft=1;
+		if (obslaeuft) {
+			// firewall-ports, geht in SUSE und Fedora
+			uchar obzu=0;
+			// udp, udp, tcp, tcp
+			svec ports; ports<<"137"<<"138"<<"139"<<"445";
+			for(size_t i=0;i<ports.size();i++) {
+				svec rueck;
+				systemrueck("iptables -L -n|grep "+ports[i],obverb,oblog,&rueck,/*obsudc=*/1);
+				if (rueck.size()) {
+					if (obverb>1) ::Log(rueck[0],obverb-1,oblog);
+					if (rueck[0].substr(0,6)=="ACCEPT" || rueck[0].substr(0,3)=="LOG") {
+						if (obverb) Log(Txk[T_Firewallport]+blaus+ports[i]+schwarz+Txk[T_offen]);
+						continue;
+					}
+				} // 			if (rueck.size())
+				if (obverb) Log(Txk[T_Firewallport]+blaus+ports[i]+schwarz+Txk[T_zu]);
+				obzu=1;
+				break;
+			} // 		for(size_t i=0;i<ports.size();i++) 
+			if (obzu) {
+				lsysen system=lsys.getsys(obverb,oblog);
+				if (system==fed) {
+					// fedora:
+					// firewall-cmd --state
+					const string bef="firewall-cmd --permanent --add-service=samba&&"+sudc+"firewall-cmd --reload";
+					systemrueck(bef,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+					anfgg(unindt,sudc+"firewall-cmd --permanent --remove-service=samba&&"+sudc+"firewall-cmd --reload",
+							bef,obverb,oblog);
+					// selinux: // offenbar unnoetig
+				} else {
+					// Suse-Firewall
+					const string susefw="/etc/sysconfig/SuSEfirewall2";
+					struct stat fstat={0};
+					if (!lstat(susefw.c_str(),&fstat)) {
+						string part="server";
+						for(int i=1;i<3;i++) {
+							int nichtfrei=systemrueck("grep '^FW_CONFIGURATIONS_EXT=\\\".*samba-"+part+"' "+susefw,obverb,oblog,0,/*obsudc=*/0,/*verbergen=*/2);
+							if (nichtfrei && !nrzf && !obfw) {
+								obfw=Tippob(Txk[T_Soll_die_SuSEfirewall_bearbeitet_werden],Txk[T_j_af]);
+								if (!obfw) break;
+							} // 					if (nichtfrei && !nrzf && !obfw)
+							if (nichtfrei && obfw) {
+								const string bak="bak_"+meinname+ltoan(i);
+								struct stat lbak={0};
+								int fehlt=lstat((susefw+"."+bak).c_str(),&lbak);
+								const string bef="sed -i"+(fehlt?"."+bak:"")+
+									" 's/\\(FW_CONFIGURATIONS_EXT=\\\".*\\)\\(\\\".*$\\)/\\1 samba-"+part+"\\2/g' "+susefw+
+									"&&"+sudc+"systemctl restart SuSEfirewall2 smb nmb";
+								systemrueck(bef,obverb,oblog,/*rueck=*/0,/*obsudc=*/1); 
+								anfgg(unindt,sudc+"sh -c 'cp -a \""+susefw+"."+bak+"\" \""+susefw+"\"'&&systemctl restart SuSEfirewall2 smb nmb",bef,obverb,oblog);
+							} // 					if (nichtfrei && obfw)
+							part="client";
+						} // for(int i=1;i<3;i++) 
+					} // if (!lstat(susefw,&fstat)) 
+				} // 			  if (system==fed) else 
+			} // obzu
+		} // obslaeuft
+	} //   if (!(conffehlt=lstat(smbdt,&sstat)))
+} // pruefsamba
+
 void haupt::lieskonfein()
 {
 	Log(violetts+Txk[T_lieskonfein]+schwarz);
@@ -5057,9 +5329,9 @@ void haupt::setzzaehler()
 // wird aufgerufen in main vom Hauptthread
 void haupt::schreibzaehler(
 #ifdef immerwart
-const string* obempfp/*=0*/, const string* obgesap/*=0*/
+		const string* obempfp/*=0*/, const string* obgesap/*=0*/
 #endif
-)
+		)
 {
 #ifdef immerwart
 	if (obempfp)  zcnfA[4].setze(obempfp);
@@ -5106,7 +5378,7 @@ void haupt::tucronschreib(const string& zsauf,const uchar cronzuplanen,const str
 // wird aufgerufen in: main
 uchar haupt::pruefcron()
 {
-  crongeprueft=1;
+	crongeprueft=1;
 	uchar obschreib=0;
 	//  svec rueck;
 	int cronda=0;
@@ -5146,7 +5418,7 @@ uchar haupt::pruefcron()
 				tucronschreib(zsaufr[0],cronzuplanen,cbef);
 				if (cmeingegeben)
 					::Log(blaus+"'"+saufr[0]+"'"+schwarz+Txk[T_wird]+blau+(cronzuplanen?Txk[T_alle]+cronminut+Txk[T_Minuten]:Txk[T_gar_nicht])+schwarz+
-					Txk[T_statt]+blau+(vorcm.empty()?Txk[T_gar_nicht]:Txk[T_alle]+vorcm+Txk[T_Minuten])+schwarz+Txk[T_aufgerufen],1,oblog);
+							Txk[T_statt]+blau+(vorcm.empty()?Txk[T_gar_nicht]:Txk[T_alle]+vorcm+Txk[T_Minuten])+schwarz+Txk[T_aufgerufen],1,oblog);
 			} // 				if (cronminut==vorcm) else
 		} // 		if (vorcm.empty() && cronminut=="0")
 #ifdef anders
@@ -5182,7 +5454,7 @@ uchar haupt::pruefcron()
 		systemrueck(befehl,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
 #endif // anders
 	} //   if (cronda) 
-  return obschreib;
+	return obschreib;
 	//  systemrueck(string("mv -i '")+mpfad+"' /root/bin",1,0);
 } // pruefcron
 // wird aufgerufen in: main
@@ -5230,36 +5502,36 @@ void haupt::dodovi(const svec d1,const svec d2)
 	cmd=edit;
 	viadd(&cmd,akonfdt);
 	for(unsigned i=0;i<d1.size();i++) {
-	 viadd(&cmd,d1[i]);
+		viadd(&cmd,d1[i]);
 	}
 	string erg;
 	viadd(&erg,logdt,1,0,1);
 	viadd(&erg,azaehlerdt,1,0,0);
 	for(unsigned i=0;i<d2.size();i++) {
-	 viadd(&erg,d2[i],1,1,0);
+		viadd(&erg,d2[i],1,1,0);
 	}
 	vischluss(erg);
-} // void paramcl::dovi()
+} // void haupt::dovi()
 
 void haupt::update(const string& DPROG)
 {
 	perfcl perf("main");
 	if (systemrueck("wget https://raw.githubusercontent.com/"+gitv+"/"+DPROG+"/master/versdt -qO"+instvz+"/versdtakt&&"
-/*//				"[ $(echo $(cat "+instvz+"/versdtakt)'>'$(cat "+instvz+"/versdt)|bc -l) -eq 0 ]",2,oblog))*/
-// Berechnung mit |bc -l schlecht, da z.B. auf Ubuntu bc nicht unbedingt standardmäßig installiert
-				"awk \"BEGIN{print $(cat "+instvz+"/versdt)-$(cat "+instvz+"/versdtakt)}\"|grep -q ^-",obverb,oblog,/*rueck=*/0,/*obsudc=*/0)) {
-		::Log(violetts+DPROG+blau+Txk[T_muss_nicht_aktualisiert_werden]+schwarz,1,oblog);
-	} else {
-		////  struct stat entwst={0};
-		//// entwickeln muss genauso definiert sein wie in Makefile
-		////  const string ziel=instvz+(lstat((instvz+"/entwickeln").c_str(),&entwst)?nix:"/nvers");
-		const string ziel=instvz;
-		pruefverz(ziel,obverb,oblog);
-		::Log(violett+DPROG+blau+Txk[T_wird_aktualisiert_bitte_ggf_neu_starten]+schwarz,1,oblog);
-		systemrueck("M="+DPROG+"-master;wget "+defvors+DPROG+defnachs+" -O"+ziel+"/"+DPROG+".tar.gz >/dev/null 2>&1;"
-				"cd "+ziel+";rm -rf $M;tar xpvf "+DPROG+".tar.gz;cd $M;mv * ..;mv .* .. 2>/dev/null;cd ..;rmdir $M;./install.sh 2>/dev/null;",
-				 1,oblog,/*rueck=*/0,/*obsudc=*/0);
-	} // if (systemrueck ... else
+				/*//				"[ $(echo $(cat "+instvz+"/versdtakt)'>'$(cat "+instvz+"/versdt)|bc -l) -eq 0 ]",2,oblog))*/
+		// Berechnung mit |bc -l schlecht, da z.B. auf Ubuntu bc nicht unbedingt standardmäßig installiert
+		"awk \"BEGIN{print $(cat "+instvz+"/versdt)-$(cat "+instvz+"/versdtakt)}\"|grep -q ^-",obverb,oblog,/*rueck=*/0,/*obsudc=*/0)) {
+			::Log(violetts+DPROG+blau+Txk[T_muss_nicht_aktualisiert_werden]+schwarz,1,oblog);
+		} else {
+			////  struct stat entwst={0};
+			//// entwickeln muss genauso definiert sein wie in Makefile
+			////  const string ziel=instvz+(lstat((instvz+"/entwickeln").c_str(),&entwst)?nix:"/nvers");
+			const string ziel=instvz;
+			pruefverz(ziel,obverb,oblog);
+			::Log(violett+DPROG+blau+Txk[T_wird_aktualisiert_bitte_ggf_neu_starten]+schwarz,1,oblog);
+			systemrueck("M="+DPROG+"-master;wget "+defvors+DPROG+defnachs+" -O"+ziel+"/"+DPROG+".tar.gz >/dev/null 2>&1;"
+					"cd "+ziel+";rm -rf $M;tar xpvf "+DPROG+".tar.gz;cd $M;mv * ..;mv .* .. 2>/dev/null;cd ..;rmdir $M;./install.sh 2>/dev/null;",
+					1,oblog,/*rueck=*/0,/*obsudc=*/0);
+		} // if (systemrueck ... else
 } // void haupt::update(const string& DPROG)
 
 const string	haupt::passwddt="/etc/passwd",
@@ -5288,6 +5560,6 @@ void haupt::setzbenutzer(string *user)
 		tmpcuser=Tippstr(Frage.c_str(),user);
 		KLZ while (benutzer.size() && bliste.find(tmpcuser)==string::npos && 
 		tmpcuser.find(',')==string::npos); // nur vorhandene User akzeptieren
-		*user=tmpcuser;
+	 *user=tmpcuser;
 	 */
 }

@@ -53,7 +53,6 @@ enum Txdb_
   T_Fehler_beim_Verbinden,
   T_Erfolg_beim_Initialisieren_der_Verbindung_zu_mysql,
 	T_MySQL_Passwort,
-	T_fuer_Benutzer,
 	T_wird_benoetigt_fuer_Befehl,
   T_ist_leer_Wollen_Sie_eines_festlegen,
   T_j,
@@ -82,6 +81,7 @@ enum Txdb_
 	T_Verbindung_zu,
 	T_gelungen,
 	T_prueffunc,
+	T_Datenbankbenutzer_leer,
 	T_dbMAX,
 }; // enum Txdb_ 
 

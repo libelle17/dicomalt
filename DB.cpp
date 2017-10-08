@@ -30,8 +30,6 @@ const char *DB_T[T_dbMAX+1][SprachZahl]={
   {"Erfolg beim Initialisieren der Verbindung zu MySQL!","Success initializing the connection to MySQL!"},
 	// T_MySQL_Passwort
 	{"MySQL-Passwort","MySQL password"},
-	// T_fuer_Benutzer
-	{" fuer Benutzer '"," for user '"},
 	// T_wird_benoetigt_fuer_Befehl
 	{"' (wird benoetigt fuer Befehl: ","' (is needed for command: "},
   // T_ist_leer_Wollen_Sie_eines_festlegen
@@ -91,6 +89,8 @@ const char *DB_T[T_dbMAX+1][SprachZahl]={
 	{"' gelungen, user '","' succeeded, user '"},
 	// T_prueffunc
 	{"prueffunc()","checkfunc()"},
+	// T_Datenbankbenutzer_leer
+	{"Datenbankbenutzer leer!","database user empty!"},
 	{"",""}
 };
 // Txdbcl::Txdbcl() {TCp=(const char* const * const * const *)&TextC;}
@@ -248,7 +248,6 @@ void DB::init(
 		unsigned long client_flag/*=0*/,int obverb/*=0*/,int oblog/*=0*/,unsigned versuchzahl/*=3*/, const uchar ggferstellen/*=1*/)
 {
 	fehnr=0;
-	string Frage;
 	Log(Txd[T_DB_wird_initialisiert],obverb>0?obverb-1:0,oblog);
 	uchar installiert=0;
 	uchar datadirda=0;
@@ -360,6 +359,10 @@ void DB::init(
 					cerr<<Txd[T_Fehler_db]<<mysql_errno(conn[aktc])<<Txd[T_beim_Initialisieren_von_MySQL]<<this->ConnError<<endl;
 					////			throw "Fehler beim Erstellen einer MySQL-Verbindung";
 				} else {
+					if (user.empty()) {
+						cerr<<rot<<Txd[T_Datenbankbenutzer_leer]<<schwarz<<endl;
+						exit(13);
+          }
 					RS *rs;
 					for(unsigned versuch=0;versuch<versuchzahl;versuch++) {
 						////   <<"versuch: "<<versuch<<", conn[aktc]: "<<conn[aktc]<<", host: "<<host<<", user: "<<user<<", passwd "<<passwd<<", uedb: "<<uedb<<", port: "<<port<<", client_flag: "<<client_flag<<", obverb: "<<obverb<<", oblog: "<<(int)oblog<<endl;
@@ -545,7 +548,7 @@ void DB::pruefrpw(const string& wofuer, unsigned versuchzahl)
 {
   myloghost=!strcasecmp(host.c_str(),"localhost")||!strcmp(host.c_str(),"127.0.0.1")||!strcmp(host.c_str(),"::1")?"localhost":"%";
   for(unsigned versuch=0;versuch<versuchzahl;versuch++) {
-    cmd=mysqlbef+" -uroot -h'"+host+"' "+(rootpwd.empty()?"":"-p"+rootpwd)+" -e \"show variables like 'gibts wirklich nicht'\" 2>&1";
+		cmd=mysqlbef+" -uroot -h'"+host+"' "+(rootpwd.empty()?"":"-p"+rootpwd)+" -e \"show variables like 'gibts wirklich nicht'\" 2>&1";
     myr.clear();
     systemrueck(cmd,-1,0,&myr,/*obsudc=*/1);
     miterror=1;
@@ -555,7 +558,7 @@ void DB::pruefrpw(const string& wofuer, unsigned versuchzahl)
     }
     if (miterror) {
       if (!nrzf) {
-				rootpwd=Tippstr(string(Txd[T_MySQL_Passwort])+Txd[T_fuer_Benutzer]+dblau+"root"+schwarz+
+				rootpwd=Tippstr(string(Txd[T_MySQL_Passwort])+Txk[T_fuer_Benutzer]+dblau+"root"+schwarz+
 				                          Txd[T_wird_benoetigt_fuer_Befehl]+"\n"+tuerkis+wofuer+schwarz+")",0);
         ////                    if (rootpwd.empty()) return; // while (1)
         if (user=="root") passwd=rootpwd;
@@ -574,7 +577,7 @@ void DB::setzrpw(int obverb/*=0*/,int oblog/*=0*/) // Setze root-password
 		string rootpw2;
 		switch (DBS) {
 			case MySQL:
-				if (Tippob(Txd[T_MySQL_Passwort]+(Txd[T_fuer_Benutzer]+dblaus)+"root"+schwarz+Txd[T_ist_leer_Wollen_Sie_eines_festlegen])) {
+				if (Tippob(Txd[T_MySQL_Passwort]+(Txk[T_fuer_Benutzer]+dblaus)+"root"+schwarz+Txd[T_ist_leer_Wollen_Sie_eines_festlegen])) {
 					while (1) {
 						do {
 							rootpwd=Tippstr(Txd[T_Bitte_geben_Sie_ein_MySQL_Passwort_fuer_Benutzer_root_ein],&rootpwd);
@@ -676,7 +679,7 @@ if (0) {
 			exitp(24);
 			break;
 	} // 	switch (DBS)
-	if (dbsv) delete dbsv;
+	if (dbsv) {delete dbsv; dbsv=0;}
  }
 } // DB::~DB(void)
 /*//
@@ -689,9 +692,7 @@ if (0) {
 	if (mysql_query(conn,sql)) 
  *erg=mysql_error(conn);
  if (obverb)
-		pthread_mutex_lock(&printf_mutex);
  printf("Fehler %u: %s\n", mysql_errno(conn), *erg);
-		pthread_mutex_unlock(&printf_mutex);
  return 1;
 
  result = mysql_store_result(conn);
@@ -1131,7 +1132,7 @@ inline string instyp::ersetze(const char *u, const char* alt, const char* neu)
         if (*(pi+i)!=*(p+i))
         {gleich=0;break;}
       if (gleich) {erg+=neu;p+=i-1;} else erg+=(*p);
-    }
+    } //     for(char* p=(char*)u;*p;p++)
   } //   if (alt[0]==0 || !strcmp(alt,neu)) else
   return erg;
 } // ersetze(char *u, const char* alt, const char* neu)
@@ -1146,9 +1147,9 @@ inline string *instyp::sersetze( string *src, string const& target, string const
         if (idx == string::npos)  break;
         src->replace( idx, target.length(), repl);
         idx += repl.length();
-      }
-    }
-  }
+      } //       for (;;)
+    } //     if (src->length())
+  } //   if (target.length())
   return src;
 } // sersetze( string src, string const& target, string const& repl)
 
