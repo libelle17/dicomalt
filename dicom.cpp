@@ -991,7 +991,7 @@ int main(int argc, char** argv)
 		Log(violetts+Txk[T_Ende]+Tx[T_zeigvers]+schwarz,pm.obverb,pm.oblog);
 		exit(7);
 	} //   if (pm.zeigvers)
-	pm.pruefcron(); // soll vor Log(Tx[T_Verwende ... stehen
+//	pm.pruefcron(); // soll vor Log(Tx[T_Verwende ... stehen
 	if (!pm.keineverarbeitung) {
 		pm.pruefdcmj();
 		// Rueckfragen koennen auftauchen in: rueckfragen, rufpruefsamba
