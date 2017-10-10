@@ -166,6 +166,11 @@ enum T_
 	T_duser_k,
 	T_duser_l,
 	T_verwendet_fuer_Samba_den_Linux_Benutzer_string_anstatt,
+	T_Datensaetze_in_Tabelle,
+	T_eingetragen,
+	T_Dateien_in_Verzeichnis,
+	T_erstellt,
+	T_kopiert,
 	T_MAX
 };
 char const *DPROG_T[T_MAX+1][SprachZahl]={
@@ -417,6 +422,16 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
 	{"duser","duser"},
 	// T_verwendet_fuer_Samba_den_Linux_Benutzer_string_anstatt
 	{"verwendet fuer Samba den Linux-Benutzer <string> anstatt", "takes the linux user <string> for samba instead of"},
+	// T_Datensaetze_in_Tabelle
+	{" Datensaetze in Tabelle '"," records inserted in table '"},
+	// T_eingetragen
+	{"' eingetragen,","',"},
+	// T_Dateien_in_Verzeichnis
+	{" Dateien in Verzeichnis '"," files created in directory '"},
+	// T_erstellt
+	{"' erstellt,","',"},
+	// T_kopiert
+	{"' kopiert.","'."},
  {"",""}
 };
 class TxB Tx((const char* const* const* const*)DPROG_T);
@@ -631,8 +646,9 @@ constexpr const unsigned datcl::dim;
 constexpr const char *datcl::knz[dim];
 constexpr const unsigned datcl::pnnr, datcl::itnr, datcl::rpnr, datcl::tdnr, datcl::pfnr, datcl::adnr;
 
-void datcl::inDB(paramcl& pm,const int& aktc)
+ulong datcl::inDB(paramcl& pm,const int& aktc)
 {
+	ulong zl=0;
 	systemrueck("dcmdump '"+name+"' 2>/dev/null",pm.obverb,pm.oblog,&ir);
 	string erg[dim];
 	gibaus=0;
@@ -694,8 +710,10 @@ void datcl::inDB(paramcl& pm,const int& aktc)
 	eindfeld<<"PatientID";
 	eindfeld<<"Aufnahmedatum";
 	int ZDB=0;
-	rins.tbins(pm.tbn,einf,aktc,/*sammeln=*/0,/*obverb=*/ZDB,&id,/*eindeutig=*/0,eindfeld);
-	Log("ID: '"+violetts+id+schwarz+"'",pm.obverb,pm.oblog);
+	zl=rins.tbins(pm.tbn,einf,aktc,/*sammeln=*/0,/*obverb=*/ZDB,&id,/*eindeutig=*/0,eindfeld);
+	pm.dbz+=zl;
+	Log("ID: '"+violetts+id+schwarz+"', affected rows: "+violett+ltoan(zl)+schwarz,pm.obverb,pm.oblog);
+	return zl;
 } // void datcl::inDB(paramcl& pm., const int& aktc)
 
 
@@ -718,6 +736,7 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 		systemrueck("dcmj2pnm +on2 '"+name+"' > '"+neuname+"'",pm.obverb,pm.oblog);
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
+			pm.umz++;
 			struct tm tm={0};
 			strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tm);
 			tm.tm_isdst=-1;
@@ -731,7 +750,7 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 			systemrueck("chown sturm:praxis '"+neuname+"'",pm.obverb,pm.oblog);
 			const string jahr=ord[adnr].substr(0,4);
 			string cmd="cp -a '"+neuname+"' '"+pm.z2vz+"/"+jahr+"/'";
-			systemrueck(cmd,pm.obverb,pm.oblog);
+			pm.u2z+=!systemrueck(cmd,pm.obverb,pm.oblog);
 		} else {
 			RS weg(pm.My,"DELETE FROM `"+pm.tbn+"` WHERE ID="+id,aktc,ZDB);
 		} // 		if (!lstat(neuname.c_str(),&nst)) else
@@ -760,6 +779,14 @@ void paramcl::VorgbSpeziell()
 	Log(violetts+Txk[T_VorgbSpeziell]+schwarz);
 	MusterVorgb();
 } // void paramcl::VorgbSpeziell() 
+
+void paramcl::schlussanzeige()
+{
+	::Log(blaus+ltoan(dbz,10,0,4)+schwarz+Tx[T_Datensaetze_in_Tabelle]+blau+tbn+schwarz+Tx[T_eingetragen],1,1);
+	::Log(blaus+ltoan(umz,10,0,4)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+zvz+schwarz+Tx[T_erstellt],1,1);
+	::Log(blaus+ltoan(u2z,10,0,4)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+z2vz+schwarz+Tx[T_kopiert],1,1);
+	haupt::schlussanzeige();
+} // void paramcl::schlussanzeige()
 
 void paramcl::verschieb()
 {
@@ -961,7 +988,7 @@ int main(int argc, char** argv)
 	} else {
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
-			dat.inDB(pm,pm.aktc);
+			if (dat.inDB(pm,pm.aktc))
 			dat.aufPlatte(pm,pm.aktc,nr);
 		} // 	for(size_t nr=0;nr<rueck.size();nr++)
 		pm.verschieb();

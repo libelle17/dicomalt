@@ -17,7 +17,7 @@ class datcl
 		string bname;
 		string ord[dim];
 	public:
-		void inDB(paramcl& pm, const int& aktc);
+		ulong inDB(paramcl& pm, const int& aktc);
 		void aufPlatte(paramcl& pm,const int& aktc,const size_t& nr);
 		datcl(string& name);
 };
@@ -46,6 +46,9 @@ class paramcl: public haupt // Programmparameter
 		uchar obvs=0;   // ob Quelldateien bearbeitet werden sollen
     uchar anhl=0;    // <DPROG> anhalten
 		int ret=0; // Rueckgabewert
+		ulong dbz=0; // Datenbankzahl
+		ulong umz=0; // Zahl der Umgewandelten
+		ulong u2z=0; // Zahl der nach Ziel 2 Verschobenen
 	public:
 		paramcl(const int argc, const char *const *const argv,const int obverb=0, const int oblog=0);
     void pruefggfmehrfach();
@@ -67,4 +70,5 @@ class paramcl: public haupt // Programmparameter
 		void zeigdienste();
 		void pruefdcmj();
 		void verzeichnisse();
+		void schlussanzeige();
 }; // class paramcl

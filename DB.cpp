@@ -1417,8 +1417,9 @@ char* DB::tmtosqlmZ(tm *tmh,char* buf)
   return buf;
 } // char* DB::tmtosqlmZ(tm *tmh,char* buf) 
 
-my_ulonglong DB::affrows(const size_t aktc) 
+my_ulonglong DB::affrows(const size_t aktc) const
 { // affected rows
+	my_ulonglong arows=0;
   switch (DBS) {
     case MySQL:
       arows = mysql_affected_rows(conn[aktc]);
@@ -1495,7 +1496,7 @@ void RS::weisezu(const DB* pdb)
 
 // wird aufgerufen im template RS::Abfrage
 // fuer obverb gibt es die Stufen: -2 (zeige auch bei Fehlern nichts an), -1 (zeige SQL an), 0, 1
-int RS::doAbfrage(const size_t aktc/*=0*/,int obverb/*=0*/,uchar asy/*=0*/,int oblog/*=0*/,string *idp/*=0*/)
+int RS::doAbfrage(const size_t aktc/*=0*/,int obverb/*=0*/,uchar asy/*=0*/,int oblog/*=0*/,string *idp/*=0*/,my_ulonglong *arowsp/*=0*/)
 {
 	Log(obverb,oblog,0,0,"%s%s()%s, aktc: %s%zu%s, obverb: %s%d%s, asy: %s%d%s, oblog: %s%d%s,\nsql: %s%s%s",blau,__FUNCTION__,schwarz,blau,aktc,schwarz,blau, obverb,schwarz,blau,asy,schwarz,blau,oblog,schwarz,blau,sql.c_str(),schwarz);
 	fnr=0;
@@ -1589,6 +1590,7 @@ int RS::doAbfrage(const size_t aktc/*=0*/,int obverb/*=0*/,uchar asy/*=0*/,int o
 							num_rows = mysql_num_rows(result);
 						} // 						if (result)
 						if (idp) *idp=ltoan(mysql_insert_id(dbp->conn[aktc]));
+						if (arowsp) *arowsp=mysql_affected_rows(dbp->conn[aktc]);
 						////			row = mysql_fetch_row(result);
 						break;
 					} // 					if (obfalsch) else
@@ -1792,9 +1794,10 @@ void RS::tbupd(const string& utab, vector< instyp > einf,int obverb, const strin
 	 sammeln=0 ohne Puffer/Puffer auf Datenbank schreiben
  */
 // fuer obverb gibt es die Stufen: -2 (zeige auch bei Fehlern nichts an), -1 (zeige SQL an), 0, 1
-void RS::tbins(const string& itab, vector<instyp>einf,const size_t aktc/*=0*/,uchar sammeln/*=0*/,
+my_ulonglong RS::tbins(const string& itab, vector<instyp>einf,const size_t aktc/*=0*/,uchar sammeln/*=0*/,
 		int obverb/*=0*/,string *idp/*=0*/,const uchar eindeutig/*=0*/,const svec& eindfeld/*=nix*/,const uchar asy/*=0*/,svec *csets/*=0*/) 
 {
+	my_ulonglong zl=0;
 	ulong locks=0;
 	uchar obhauptfehl=0;
   static uchar dochanfangen=0; // => bei Erreichen von maxzaehler in der naechsten Runde neu anfangen
@@ -1961,7 +1964,7 @@ void RS::tbins(const string& itab, vector<instyp>einf,const size_t aktc/*=0*/,uc
 						for(size_t iiru=0;iiru<(csets?csets->size():1);iiru++) {
 						  if (csets)
 								RS zs(dbp,"SET NAMES '"+csets->at(iiru)+"'",aktc,obverb);
-							Abfrage(isql,aktc,obverb,asy,/*oblog*/0,idp);
+							Abfrage(isql,aktc,obverb,asy,/*oblog*/0,idp,&zl);
 							if (csets) if (iiru)
 								RS zs(dbp,"SET NAMES '"+csets->at(0)+"'",aktc,obverb);
 							if (!fnr) break;
@@ -2011,7 +2014,8 @@ void RS::tbins(const string& itab, vector<instyp>einf,const size_t aktc/*=0*/,uc
       delete[] maxl; maxl=0;
     }
   } //   if (!sammeln) if (!obhauptfehl)
-} // int DB::insert(vector< instyp > einf,const char** erg,int anfangen=1,int sammeln=0) 
+	return zl;
+} // my_ulonglong DB::insert(vector< instyp > einf,const char** erg,int anfangen=1,int sammeln=0) 
 
 void DB::prueffunc(const string& pname, const string& body, const string& para, const size_t aktc, int obverb, int oblog)
 {

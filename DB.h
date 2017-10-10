@@ -291,7 +291,6 @@ class DB
 		void pruefrpw(const string& wofuer, unsigned versuchzahl);
 		void setzrpw(int obverb=0, int oblog=0);
 		void prueffunc(const string& pname, const string& body, const string& para, const size_t aktc, int obverb, int oblog);
-		my_ulonglong arows;
 		vector< vector<instyp> > ins;
 		void erweitern(const string& tab, vector<instyp> einf,const size_t aktc,int obverb,uchar obsammeln=0, const unsigned long *maxl=0) const;
 		uchar tuerweitern(const string& tab, const string& feld,long wlength,const size_t aktc,int obverb) const;
@@ -325,7 +324,7 @@ class DB
     char* tmtosql(tm *tmh,char* buf);
     char* tmtosqlmZ(tm *tmh,char* buf);
     ////	char** HolZeile();
-    my_ulonglong affrows(const size_t aktc); // unsigned __int64
+    my_ulonglong affrows(const size_t aktc) const; // unsigned __int64
 }; // class DB 
 
 class Tabelle 
@@ -385,11 +384,11 @@ class RS
     void weisezu(const DB* pdb);
     void clear();
     template<typename sT> 
-      int Abfrage(sT psql,const size_t aktc/*=0*/,int obverb=0,uchar asy=0,int oblog=0,string *idp=0){
+      int Abfrage(sT psql,const size_t aktc/*=0*/,int obverb=0,uchar asy=0,int oblog=0,string *idp=0,my_ulonglong *arowsp=0){
         int erg=-1;
         this->sql=psql;
         if (!sql.empty()) {
-          erg = doAbfrage(aktc,obverb,asy,oblog,idp);
+          erg = doAbfrage(aktc,obverb,asy,oblog,idp,arowsp);
         } //         if (!sql.empty())
         return erg;
       } //       int Abfrage(sT psql,int obverb=1,uchar asy=0)
@@ -399,12 +398,12 @@ class RS
     RS(const DB* pdb,stringstream psqls, const size_t aktc, int obverb/*=1*/);
     ~RS();
     void tbupd(const string& tab,vector<instyp> einf,int obverb, const string& bedingung, const size_t aktc/*=0*/, uchar asy=0);
-    void tbins(const string& tab,vector<instyp> einf,const size_t aktc=0,uchar sammeln=0,int obverb=0,string *id=0,
+    my_ulonglong tbins(const string& tab,vector<instyp> einf,const size_t aktc=0,uchar sammeln=0,int obverb=0,string *id=0,
 		     const uchar eindeutig=0,const svec& eindfeld=svec(),const uchar asy=0, svec *csets=0);
 		void machstrikt(string& altmode,const size_t aktc=0);
 		void striktzurueck(string& altmode,const size_t aktc=0);
   private:
-    int doAbfrage(const size_t aktc/*=0*/,int obverb/*=0*/,uchar asy/*=0*/,int oblog/*=0*/,string *idp/*=0*/);
+    int doAbfrage(const size_t aktc/*=0*/,int obverb/*=0*/,uchar asy/*=0*/,int oblog/*=0*/,string *idp/*=0*/,my_ulonglong *arowsp/*=0*/);
 }; // class RS
 
 ////string ersetze(const char *u, const char* alt, const char* neu);

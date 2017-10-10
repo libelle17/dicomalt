@@ -1142,7 +1142,7 @@ class haupt
 		uchar pruefcron();
 		void dodovi(const svec d1,const svec d2);
 		void dovi();
-		void schlussanzeige();
+		virtual void schlussanzeige();
 		void update(const string& DPROG);
 		void setzbenutzer(string *user);
 }; // class haupt

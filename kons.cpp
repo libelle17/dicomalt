@@ -1260,7 +1260,7 @@ perf2= static_cast<double> (perfEnd.tv_sec * 1000000 + perfEnd.tv_usec- perfStar
 }    // long cmpmem( char* feld, const char* search, int len_feld) // , int len_search
 
 
-string ltoan(long value, int base, uchar obtz, uchar minstel) 
+string ltoan(long value, int base/*=10*/, uchar obtz/*=0*/, uchar minstel/*=0*/) 
 {
   /**
    * C++ version 0.4 char* style "itoa":
