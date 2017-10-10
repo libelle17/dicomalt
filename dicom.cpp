@@ -171,6 +171,17 @@ enum T_
 	T_Dateien_in_Verzeichnis,
 	T_erstellt,
 	T_kopiert,
+	T_Dicom_Dateien,
+	T_gefunden,
+	T_Keine,
+	T_Alle,
+	T_Dateien_von,
+	T_nach_,
+	T_verschoben,
+	T_Nr,
+	T_Fehler_beim_Datumsetzen_von,
+	T_in_Datenbank,
+	T_jahr,
 	T_MAX
 };
 char const *DPROG_T[T_MAX+1][SprachZahl]={
@@ -431,9 +442,31 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
 	// T_erstellt
 	{"' erstellt,","',"},
 	// T_kopiert
-	{"' kopiert.","'."},
+	{"' kopiert,","',"},
+	// T_Dicom_Dateien
+	{" Dicom-Dateien in '"," dicom files found in '"},
+	// T_gefunden
+	{"' gefunden,","',"},
+	// T_Keine
+	{"Keine","   No"},
+	// T_Alle
+	{" Alle","  All"},
+	// T_Dateien_von
+	{" Dateien von '"," files moved from '"},
+	// T_nach_
+	{"' nach '","' to '"},
+	// T_verschoben
+	{"' verschoben.","'."},
+	// T_Nr
+	{"Nr: ","No: "},
+	// T_Fehler_beim_Datumsetzen_von
+	{"Fehler beim Datumsetzen von '","Error while setting the date for '"},
+	// T_in_Datenbank
+	{"' in Datenbank '","' in database '"},
+	// T_jahr
+	{"<jahr>","<year>"},
  {"",""}
-};
+}; // char const *DPROG_T[T_MAX+1][SprachZahl]=
 class TxB Tx((const char* const* const* const*)DPROG_T);
 const string& pwk = "8A490qdmjsaop4a89d0qÃ9m0943Ã09Ãax"; // fuer Antlitzaenderung
 const DBSTyp myDBS=MySQL;
@@ -623,7 +656,7 @@ int paramcl::getcommandline()
 		if (obhilfe<3) {
 			cout<<blau<<Tx[T_Gebrauch]<<drot<<meinname<<" [-<opt>|--<longopt> [<content>]] ..."<<schwarz<<endl; 
 			cout<<Tx[T_Liest_Dicom_Dateien_aus]<<blau<<qvz<<schwarz<<Tx[T_speichert_sie_als_png_Bilder_in]<<blau<<zvz<<schwarz<<
-				Tx[T_und]<<z2vz<<Tx[T_und_verschiebt_zuletzt_die_Orignale_nach]<<blau<<avz<<schwarz<<endl;
+				Tx[T_und]<<blau<<z2vz<<vtz<<Tx[T_jahr]<<schwarz<<Tx[T_und_verschiebt_zuletzt_die_Orignale_nach]<<blau<<avz<<schwarz<<endl;
 		}
 		cout<<blau<<Tx[T_Optionen_die_nicht_gespeichert_werden]<<schwarz<<endl;
 		for(size_t j=0;j<opts.size();j++) {
@@ -700,7 +733,6 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 	einf.push_back(instyp(pm.My->DBS,"PerformingPhysicianName",&ord[6]));
 	einf.push_back(instyp(pm.My->DBS,"TransducerData",&ord[tdnr]));
 	einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[8]));
-	struct tm tma={0};
 	strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
 	einf.push_back(instyp(pm.My->DBS,"Aufnahmedatum",&tma));
 	ord[adnr].insert(8,"_");
@@ -721,6 +753,7 @@ datcl::datcl(string& name): name(name)
 {
 }
 
+// aufgerufen in main
 void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 {
 	for(unsigned j=0;j<dim;j++) {
@@ -737,19 +770,17 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
 			pm.umz++;
-			struct tm tm={0};
-			strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tm);
-			tm.tm_isdst=-1;
-			time_t modz=mktime(&tm);
+			const string jahr=ord[adnr].substr(0,4);
+			tma.tm_isdst=-1;
+			time_t modz=mktime(&tma);
 			struct utimbuf ub={0};
 			ub.modtime=modz;
 			ub.actime=modz;
 			if (utime(neuname.c_str(),&ub)) {
-				Log(rots+"Fehler beim Datumsetzen von '"+blau+neuname+schwarz,pm.obverb,pm.oblog);
+				Log(rots+Tx[T_Fehler_beim_Datumsetzen_von]+blau+neuname+"'"+schwarz,pm.obverb,pm.oblog);
 			}
 			systemrueck("chown sturm:praxis '"+neuname+"'",pm.obverb,pm.oblog);
-			const string jahr=ord[adnr].substr(0,4);
-			string cmd="cp -a '"+neuname+"' '"+pm.z2vz+"/"+jahr+"/'";
+			const string cmd="cp -a '"+neuname+"' '"+pm.z2vz+vtz+jahr+vtz+"'";
 			pm.u2z+=!systemrueck(cmd,pm.obverb,pm.oblog);
 		} else {
 			RS weg(pm.My,"DELETE FROM `"+pm.tbn+"` WHERE ID="+id,aktc,ZDB);
@@ -757,7 +788,7 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 		//		systemrueck("touch -r '"+rueck[nr]+"' '"+neuname+"'",pm.obverb,pm.oblog); // = zu spaet
 		if (gibaus)
 			Log(bname,pm.obverb,pm.oblog);
-		Log("Nr: "+blaus+ltoan(nr)+schwarz+", "+blau+name+schwarz+" "+blau+(ir.size()?ir[0]:"")+schwarz,pm.obverb,pm.oblog);
+		Log(Tx[T_Nr]+blaus+ltoan(nr)+schwarz+", "+blau+name+schwarz+" "+blau+(ir.size()?ir[0]:"")+schwarz,pm.obverb,pm.oblog);
 	} // 			if (id.empty())
 } // void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 
@@ -782,9 +813,11 @@ void paramcl::VorgbSpeziell()
 
 void paramcl::schlussanzeige()
 {
-	::Log(blaus+ltoan(dbz,10,0,4)+schwarz+Tx[T_Datensaetze_in_Tabelle]+blau+tbn+schwarz+Tx[T_eingetragen],1,1);
-	::Log(blaus+ltoan(umz,10,0,4)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+zvz+schwarz+Tx[T_erstellt],1,1);
-	::Log(blaus+ltoan(u2z,10,0,4)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+z2vz+schwarz+Tx[T_kopiert],1,1);
+	::Log(blaus+ltoan(dcz,10,0,5)+schwarz+Tx[T_Dicom_Dateien]+blau+qvz+schwarz+Tx[T_gefunden],1,1);
+	::Log(blaus+ltoan(dbz,10,0,5)+schwarz+Tx[T_Datensaetze_in_Tabelle]+blau+tbn+schwarz+Tx[T_in_Datenbank]+blau+dbn+schwarz+Tx[T_eingetragen],1,1);
+	::Log(blaus+ltoan(umz,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+zvz+schwarz+Tx[T_erstellt],1,1);
+	::Log(blaus+ltoan(u2z,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+z2vz+vtz+Tx[T_jahr]+schwarz+Tx[T_kopiert],1,1);
+	::Log(blaus+(ret?Tx[T_Keine]:Tx[T_Alle])+schwarz+Tx[T_Dateien_von]+blau+qvz+schwarz+Tx[T_nach_]+blau+avz+schwarz+Tx[T_verschoben],1,1);
 	haupt::schlussanzeige();
 } // void paramcl::schlussanzeige()
 
@@ -799,8 +832,7 @@ void paramcl::verschieb()
 		const string nvz=avz+vtz+zbuf;
 		pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
 		const string cmd="mv -n '"+qvz+vtz+"'* '"+nvz+vtz+"'";
-		systemrueck(cmd,obverb,oblog);
-		ret=0;
+		ret=systemrueck(cmd,obverb,oblog);
 } // void paramcl::verschieb()
 
 // wird aufgerufen in: main
@@ -986,6 +1018,7 @@ int main(int argc, char** argv)
 	 Log(rots+"Keine Dateien in '"+blau+pm.qvz+rot+"' gefunden!"+schwarz,1,0);
 	 pm.ret=1;
 	} else {
+		pm.dcz=rueck.size();
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
 			if (dat.inDB(pm,pm.aktc))
