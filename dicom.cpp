@@ -57,10 +57,10 @@ enum T_
 	T_Tabelle_fuer_dicom_Bilder,
 	T_Fehler_beim_Pruefen_von_dictab,
 	T_VorgbSpeziell,
-	T_Quellverzeichnis,
-	T_Archivverzeichnis,
-	T_Zielverzeichnis,
-	T_Zweites_Zielverzeichnis,
+	T_Quellverzeichnis_anstatt,
+	T_Archivverzeichnis_anstatt,
+	T_Zielverzeichnis_anstatt,
+	T_Zweites_Zielverzeichnis_anstatt,
 	T_verwendet_die_Datenbank_auf_Host_string_anstatt_auf,
 	T_verwendet_fuer_MySQL_MariaDB_den_Benutzer_string_anstatt,
 	T_verwendet_fuer_MySQL_MariaDB_das_Passwort_string,
@@ -213,14 +213,14 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
  {"Fehler eim Prüfen der Tabelle dictab","error checking table dictab"},
  // T_VorgbSpeziell
  {"VorgbSpeziell()","specificprefs()"},
- // T_Quellverzeichnis
- {"Quellverzeichnis","source directory"},
- // T_Archivverzeichnis
- {"Archiverzeichnis","archive directory"},
- // T_Zielverzeichnis
- {"Zielverzeichnis","target directory"},
- // T_Zweites_Zielverzeichnis
- {"Zweites Zielverzeichnis","Second target directory"},
+ // T_Quellverzeichnis_anstatt
+ {"Quellverzeichnis anstatt ","source directory instead of "},
+ // T_Archivverzeichnis_anstatt
+ {"Archiverzeichnis anstatt ","archive directory instead of "},
+ // T_Zielverzeichnis_anstatt
+ {"Zielverzeichnis anstatt ","target directory instead of "},
+ // T_Zweites_Zielverzeichnis_anstatt
+ {"Zweites Zielverzeichnis anstatt ","Second target directory instead of "},
  // T_verwendet_die_Datenbank_auf_Host_string_anstatt_auf
  {"verwendet die Datenbank auf Host <string> anstatt auf","takes the database on host <string> instead of"},
  // T_verwendet_fuer_MySQL_MariaDB_den_Benutzer_string_anstatt
@@ -612,13 +612,13 @@ int paramcl::getcommandline()
 	opts.push_back(/*4*/optioncl(T_sqlv_k,T_sql_verbose_l, &Tx, T_Bildschirmausgabe_mit_SQL_Befehlen,1,&ZDB,1));
 	opts.push_back(/*4*/optioncl(T_rf_k,T_rueckfragen_l, &Tx, T_alle_Parameter_werden_abgefragt_darunter_einige_hier_nicht_gezeigten,1,&rzf,1));
 	opts.push_back(/*4*/optioncl(T_krf_k,T_keinerueckfragen_l, &Tx, T_keine_Rueckfragen_zB_aus_Cron,1,&nrzf,1));
-	opts.push_back(/*2a*/optioncl(T_qvz_k,T_qvz_l, &Tx, T_Quellverzeichnis,0,&qvz,pverz,&agcnfA,"qvz",&obkschreib));
-	opts.push_back(/*2a*/optioncl(T_avz_k,T_avz_l, &Tx, T_Archivverzeichnis,0,&avz,pverz,&agcnfA,"avz",&obkschreib));
-	opts.push_back(/*2a*/optioncl(T_zvz_k,T_zvz_l, &Tx, T_Zielverzeichnis,0,&zvz,pverz,&agcnfA,"zvz",&obkschreib));
-	opts.push_back(/*2a*/optioncl(T_z2vz_k,T_z2vz_l, &Tx, T_Zweites_Zielverzeichnis,0,&z2vz,pverz,&agcnfA,"z2vz",&obkschreib));
+	opts.push_back(/*2a*/optioncl(T_qvz_k,T_qvz_l, &Tx, T_Quellverzeichnis_anstatt,1,&qvz,pverz,&agcnfA,"qvz",&obkschreib));
+	opts.push_back(/*2a*/optioncl(T_avz_k,T_avz_l, &Tx, T_Archivverzeichnis_anstatt,1,&avz,pverz,&agcnfA,"avz",&obkschreib));
+	opts.push_back(/*2a*/optioncl(T_zvz_k,T_zvz_l, &Tx, T_Zielverzeichnis_anstatt,1,&zvz,pverz,&agcnfA,"zvz",&obkschreib));
+	opts.push_back(/*2a*/optioncl(T_z2vz_k,T_z2vz_l, &Tx, T_Zweites_Zielverzeichnis_anstatt,1,&z2vz,pverz,&agcnfA,"z2vz",&obkschreib));
 	opts.push_back(/*4*/optioncl(T_info_k,T_version_l, &Tx, T_Zeigt_die_Programmversion_an, 1, &zeigvers,1));
 	opts.push_back(/*4*/optioncl(T_vi_k,T_vi_l, &Tx, T_Konfigurations_u_Logdatei_bearbeiten_sehen, 1, &obvi,1));
-	opts.push_back(/*4*/optioncl(T_vs_k,T_vs_l, &Tx, T_Quelldateien_bearbeiten, 0, &obvs,1));
+	opts.push_back(/*4*/optioncl(T_vs_k,T_vs_l, &Tx, T_Quelldateien_bearbeiten, 1, &obvs,1));
 	opts.push_back(/*4*/optioncl(T_h_k,T_hilfe_l, &Tx, T_Erklaerung_haeufiger_Optionen, 1, &obhilfe,1));
 	opts.push_back(/*4*/optioncl(T_lh_k,T_lhilfe_l, &Tx, T_Erklaerung_aller_Optionen, 1, &obhilfe,2));
 	opts.push_back(/*4*/optioncl(T_fgz_k,T_fgz_l, &Tx, -1, 1, &obhilfe,1));
@@ -991,6 +991,7 @@ int main(int argc, char** argv)
 		Log(violetts+Txk[T_Ende]+Tx[T_zeigvers]+schwarz,pm.obverb,pm.oblog);
 		exit(7);
 	} //   if (pm.zeigvers)
+	pm.pruefcron(); // soll vor Log(Tx[T_Verwende ... stehen
 	if (!pm.keineverarbeitung) {
 		pm.pruefdcmj();
 		// Rueckfragen koennen auftauchen in: rueckfragen, rufpruefsamba

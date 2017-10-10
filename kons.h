@@ -750,7 +750,7 @@ class optioncl
 		const int langi=0;
     TxB *TxBp=0;
     const long Txi=0;
-		uchar wi=0; // Wichtigkeit: 1= wird mit -lh oder -h, 0= nur mit -h, 255 (-1) = gar nicht angezeigt
+		uchar wi=0; // Wichtigkeit: 1= wird mit -lh oder -h, 0= nur mit -lh, 255 (-1) = gar nicht angezeigt
     const string *rottxt=0; // ggf rot zu markierender Text zwischen Txi und Txi2
     long Txi2=-1;
 //    string oerkl;
