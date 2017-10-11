@@ -188,6 +188,7 @@ enum T_
 	T_rueck_l,
 	T_Keine_Dateien_in,
 	T_Gefunden,
+	T_Erstellt,
 	T_MAX
 };
 char const *DPROG_T[T_MAX+1][SprachZahl]={
@@ -483,7 +484,9 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
 	{"Keine Dateien in '","No files found in '"},
 	// T_Gefunden
 	{"' gefunden!","'!"},
- {"",""}
+	// T_Erstellt
+	{" Erstellt: ","Made: "},
+	{"",""} 
 }; // char const *DPROG_T[T_MAX+1][SprachZahl]=
 class TxB Tx((const char* const* const* const*)DPROG_T);
 const string& pwk = "8A490qdmjsaop4a89d0qÃ9m0943Ã09Ãax"; // fuer Antlitzaenderung
@@ -768,7 +771,7 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 	einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[8]));
 	strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
 	einf.push_back(instyp(pm.My->DBS,"Aufnahmedatum",&tma));
-	einf.push_back(instyp(pm.My->DBS,"Importdatum",pm.jtp));
+	einf.push_back(instyp(pm.My->DBS,"Importdatum",&pm.jt));
 	ord[adnr].insert(8,"_");
 	svec eindfeld;
 	eindfeld<<"PatientName";
@@ -804,13 +807,16 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 			svec srueck;
 			systemrueck("dcmj2pnm +on2 '"+name+"' > '"+neuname+"'",pm.obverb,pm.oblog,&srueck);
 			if (srueck.size()) {
-						if (srueck[0].find("no version information")==string::npos)
+				if (srueck[0].find("no version information")==string::npos)
 							break;
+			} else {
+				break;
 			}
 			pm.prueftif();
 		} // 		for(int iru=0;iru<2;iru++)
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
+			::Log(Tx[T_Erstellt]+blaus+neuname+schwarz,1,pm.oblog);
 			pm.umz++;
 			const string jahr=ord[adnr].substr(0,4);
 			tma.tm_isdst=-1;
@@ -865,7 +871,7 @@ void paramcl::schlussanzeige()
 	::Log(blaus+ltoan(dbz,10,0,5)+schwarz+Tx[T_Datensaetze_in_Tabelle]+blau+tbn+schwarz+Tx[T_in_Datenbank]+blau+dbn+schwarz+Tx[T_eingetragen],1,1);
 	::Log(blaus+ltoan(umz,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+zvz+schwarz+Tx[T_erstellt],1,1);
 	::Log(blaus+ltoan(u2z,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+z2vz+vtz+Tx[T_jahr]+schwarz+Tx[T_kopiert],1,1);
-	::Log(blaus+(pfehler?Tx[T_Keine]:Tx[T_Alle])+schwarz+Tx[T_Dateien_von]+blau+qvz+schwarz+Tx[T_nach_]+blau+avz+schwarz+Tx[T_verschoben],1,1);
+	::Log(blaus+(pfehler?Tx[T_Keine]:Tx[T_Alle])+schwarz+Tx[T_Dateien_von]+blau+qvz+schwarz+Tx[T_nach_]+blau+avz+vtz+impvz+schwarz+Tx[T_verschoben],1,1);
 	haupt::schlussanzeige();
 } // void paramcl::schlussanzeige()
 
@@ -873,8 +879,8 @@ void paramcl::machimpvz()
 {
 	time_t jetzt;
 	time(&jetzt);
-	jtp=localtime(&jetzt);
-	strftime(impvz,16,"%Y%m%d_%H%M%S",jtp);
+	memcpy(jt,localtime(&jetzt),sizeof jt);
+	strftime(impvz,16,"%Y%m%d_%H%M%S",&jt);
 	nvz=avz+vtz+impvz;
 	pfehler= pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
 } // void paramcl::machimpvz()

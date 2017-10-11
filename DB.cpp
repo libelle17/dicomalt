@@ -1253,10 +1253,12 @@ string *sqlft::sersetze( string *src, string const& target, string const& repl)
 /*// 
    sqlft::sqlft(DBSTyp eDBS, time_t *tm):
    string(21,0) {
-   struct tm zt={0};
-   memcpy(&zt,localtime(tm),sizeof zt);
-		pthread_mutex_lock(&printf_mutex);
-   sprintf((char*)c_str(),"%c%.4d-%.2d-%.2d %.2d:%.2d:%.2d%c",dvb(eDBS),zt.tm_year+1900,zt.tm_mon+1,zt.tm_mday,zt.tm_hour,zt.tm_min,zt.tm_sec,dve(eDBS));
+	 struct tm zt={0};
+	 pthread_mutex_lock(&timemutex);
+	 memcpy(&zt,localtime(tm),sizeof zt);
+	 pthread_mutex_unlock(&timemutex);
+	 pthread_mutex_lock(&printf_mutex);
+	 sprintf((char*)c_str(),"%c%.4d-%.2d-%.2d %.2d:%.2d:%.2d%c",dvb(eDBS),zt.tm_year+1900,zt.tm_mon+1,zt.tm_mday,zt.tm_hour,zt.tm_min,zt.tm_sec,dve(eDBS));
 		pthread_mutex_unlock(&printf_mutex);
    }
  */
@@ -1264,8 +1266,10 @@ string *sqlft::sersetze( string *src, string const& target, string const& repl)
 sqlft::sqlft(DBSTyp eDBS, const time_t *tm): string(21,0)
 {
   struct tm zt={0};
-  memcpy(&zt,localtime(tm),sizeof zt);
-  druckeein(eDBS,&zt);
+	pthread_mutex_lock(&timemutex);
+	memcpy(&zt,localtime(tm),sizeof zt);
+	pthread_mutex_unlock(&timemutex);
+	druckeein(eDBS,&zt);
 } // sqlft::sqlft(DBSTyp eDBS, time_t *tm): string(21,0)
 
 void stmax(int *zahl,int stellen=2)

@@ -52,7 +52,7 @@ class paramcl: public haupt // Programmparameter
 		ulong dbz=0; // Datenbankzahl
 		ulong umz=0; // Zahl der Umgewandelten
 		ulong u2z=0; // Zahl der nach Ziel 2 Verschobenen
-		struct tm *jtp; // Datum des Importverzeichnises
+		struct tm jt; // Datum des Importverzeichnises
 		char impvz[16]; // Importverzeichnis, z.B. 20171011_082351
 		string nvz; // Gesamtpfad Importverzeichnis, z.B. /DATA/Patientendokumente/HDalt/20171011_082351
 	public:

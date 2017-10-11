@@ -17,7 +17,8 @@ const char *dir = "dir ";
 const char *dir = "ls -l ";
 #endif
 const char *tmmoegl[2]={"%d.%m.%y","%c"}; // Moeglichkeiten fuer strptime
-pthread_mutex_t printf_mutex,getmutex;
+// zum Schutz statischer Speicherbereiche vor gleichzeitigem Zugriff durch mehrere Programmfäden
+pthread_mutex_t printf_mutex, getmutex, timemutex;
 
 #ifdef linux
 #include <iomanip> // setprecision
@@ -1113,7 +1114,9 @@ int Log(const string& text, const short screen/*=1*/, const short file/*=1*/, co
 				static bool erstaufruf=1;
 				char tbuf[20];
 				time_t jetzt=time(0);
+				pthread_mutex_lock(&timemutex);
 				strftime(tbuf,sizeof tbuf,"%d.%m.%y %X: ",localtime(&jetzt));
+				pthread_mutex_unlock(&timemutex);
 				string zwi=tbuf+text; 
 				loeschefarbenaus(&zwi);
 
@@ -2070,10 +2073,12 @@ int multischlschreib(const string& fname, schlArr *const *const mcnfApp, const s
     if (!mpfad.empty()) {
       char buf[30];
       time_t jetzt=time(0);
-      tm *ltm = localtime(&jetzt);
-      strftime(buf, sizeof(buf), "%d.%m.%Y %H.%M.%S", ltm);
-      const string ueberschr=Txk[T_Konfiguration_fuer]+mpfad+Txk[T_erstellt_automatisch_durch_dieses_am]+buf;
-      if (!ueberschr.empty()) f<<ueberschr<<endl;
+			pthread_mutex_lock(&timemutex);
+			tm *ltm = localtime(&jetzt);
+			strftime(buf, sizeof(buf), "%d.%m.%Y %H.%M.%S", ltm);
+			pthread_mutex_unlock(&timemutex);
+			const string ueberschr=Txk[T_Konfiguration_fuer]+mpfad+Txk[T_erstellt_automatisch_durch_dieses_am]+buf;
+			if (!ueberschr.empty()) f<<ueberschr<<endl;
     } //     if (!mpfad.empty())
     for (size_t j=0;j<cszahl;j++) {
      mcnfApp[j]->aschreib(&f);
@@ -3593,9 +3598,11 @@ void doanfg(const string& datei, const string& inhalt, const string& comment)
 		////			uniff<<inhalt<<"\n"<<"printf \"%b"<<ersetzAllezu(inhalt,"\"","\\\"")<<"%b\\n\" \"\\033[1;34m\" \"\\033[0m\""<<endl;
 		// s. ausricht() in configure
 		time_t rohz=time(0);
+		pthread_mutex_lock(&timemutex);
 		struct tm *zeiti=localtime(&rohz);
 		char buf[80];
 		strftime(buf,sizeof buf,"%F %T",zeiti);
+		pthread_mutex_unlock(&timemutex);
 		uniff<<inhalt<<"\n# "<<comment<<"\nprintf \"(Inst: "<<buf<<"): $blau%s$reset\\n\" \""<<
 			ersetzAllezu(inhalt,"\"","\\\"")<<"\""<<endl;
 	} else {
@@ -3798,8 +3805,10 @@ uchar servc::spruef(const string& sbez, uchar obfork, const string& parent, cons
 				syst<<"[Unit]"<<endl;
 				char buf[80];
 				time_t jetzt = time(0);
+				pthread_mutex_lock(&timemutex);
 				struct tm *tmp = localtime(&jetzt);
 				strftime(buf, sizeof(buf), "%d.%m.%y %H:%M:%S", tmp);
+				pthread_mutex_unlock(&timemutex);
 				syst<<"Description="<<sbez<<Txk[T_als_Dienst_eingerichtet_von]<<parent<<Txk[T_am]<<buf<<endl;
 				if (!CondPath.empty()) 
 					syst<<"ConditionPathExists="<<CondPath<<endl;
@@ -4628,14 +4637,18 @@ int find3cl::ausgeb()
 			printf("-------");
 		else
 			printf(" %7jd",(intmax_t) jt->sb.st_size);
-		struct tm *tm=localtime(&jt->sb.st_mtime);
+		pthread_mutex_lock(&timemutex);
+		struct tm *tp=localtime(&jt->sb.st_mtime);
 		char buf[80];
-		strftime(buf, sizeof buf,"%F %X",tm);
+		strftime(buf, sizeof buf,"%F %X",tp);
+		pthread_mutex_unlock(&timemutex);
 		//        printf(" %s %-40s %5d %s",buf, jt->pfad.c_str(), jt->ftw.base, jt->pfad.c_str()+jt->ftw.base);
 		printf(" %s %-40s",buf, jt->pfad.c_str());
 		if (jt->tflag==FTW_SL) {
-			tm=localtime(&jt->lst.st_mtime);
-			strftime(buf, sizeof buf,"%F %X",tm);
+			pthread_mutex_lock(&timemutex);
+			tp=localtime(&jt->lst.st_mtime);
+			strftime(buf, sizeof buf,"%F %X",tp);
+			pthread_mutex_unlock(&timemutex);
 			printf(" %s %s %s",folge&Fol_Dat?"<-":"->",buf,jt->lnk.c_str());
 		}
 		printf("\n");
@@ -4946,7 +4959,9 @@ void haupt::zeigkonf()
 	char buf[100]={0};
 	if (!lstat(akonfdt.c_str(),&kstat)) {
 		struct tm tm={0};
+		pthread_mutex_lock(&timemutex);
 		memcpy(&tm, localtime(&kstat.st_mtime),sizeof(tm));
+		pthread_mutex_unlock(&timemutex);
 		strftime(buf, sizeof(buf), "%d.%m.%Y %H.%M.%S", &tm);
 	} //   if (!lstat(akonfdt.c_str(),&kstat))
 	cout<<Txk[T_aktuelle_Einstellungen_aus]<<blau<<akonfdt<<schwarz<<"' ("<<buf<<"):"<<endl;
@@ -5331,6 +5346,7 @@ void haupt::setzzaehler()
 	//// <<"aufrufe: "<<aufrufe<<endl;
 	zcnfA[0].setze(&aufrufe);
 	time_t jetzt=time(0);
+	pthread_mutex_lock(&timemutex);
 	struct tm heute=*localtime(&jetzt);
 	if (heute.tm_year!=laufrtag.tm_year || heute.tm_yday!=laufrtag.tm_yday) {
 		tagesaufr=0;
@@ -5339,6 +5355,7 @@ void haupt::setzzaehler()
 		monatsaufr=0;
 	}
 	zcnfA[1].setze(&heute);
+	pthread_mutex_unlock(&timemutex);
 	tagesaufr++;
 	zcnfA[2].setze(&tagesaufr);
 	monatsaufr++;

@@ -131,7 +131,7 @@ enum {
 
 #define caus cout // nur zum Debuggen
 #define exitt exit // fuer threads
-extern pthread_mutex_t getmutex, printf_mutex;
+extern pthread_mutex_t getmutex, printf_mutex, timemutex;
 extern const string devtty;
 
 typedef unsigned long long ull;
