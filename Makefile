@@ -29,6 +29,7 @@
 #                   installiert man-Seiten aus man_de und man_en, ferner *.html-Dateien und eine README.md-Datei fuer den git-Server
 # "make stumm und make stumminst" => zum Aufruf aus vim
 # "make git" => aktualisiert die Datei auf dem zugeordneten git-Server
+# "make giterlaub" => speichert die Daten zum Hochladen auf den git-Server
 # "make version" => kompilieren mit opts, installieren und aktualisieren auf git-Server mit einheitlicher Dateiversion
 # "make transfer <zielvz>" => kopieren der Programmdateien abzüglich bestimmter Kommentare in Zielverzeichnis <zielvz>
 # "make verschieb" => wie transfer, mit ../<DPROG>rein als Zielverzeichnis
@@ -233,6 +234,10 @@ git: README.md
 	@git commit -m "Version $$(cat versdt)"
 	@grep remote\ \"origin\"] .git/config >/dev/null 2>&1||git remote add origin https://github.com/$$(sed 's/"//g' gitvdt)/$(DPROG).git
 	@git push -u origin master
+
+giterlaub:
+	@git config credential.helper store	
+	@git config --global credential.helper 'cache --timeout=36000'
 
 anzeig:
 # 'echo -e' geht nicht z.B. in ubuntu
