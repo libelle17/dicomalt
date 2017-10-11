@@ -45,19 +45,24 @@ class paramcl: public haupt // Programmparameter
 		uchar keineverarbeitung=0; // wenn cronminuten geaendert werden sollen, vorher abkuerzen
     uchar obvi=0;   // ob Konfigurationsdatei editiert werden soll
 		uchar obvs=0;   // ob Quelldateien bearbeitet werden sollen
+		uchar obrueck=0;   // ob der letzte Import rueckgaengig gemacht werden soll
     uchar anhl=0;    // <DPROG> anhalten
-		int ret=0; // Rueckgabewert
+		int pfehler=0; // Rueckgabewert
 		ulong dcz=0; // Dicomzahl
 		ulong dbz=0; // Datenbankzahl
 		ulong umz=0; // Zahl der Umgewandelten
 		ulong u2z=0; // Zahl der nach Ziel 2 Verschobenen
+		struct tm *jtp; // Datum des Importverzeichnises
+		char impvz[16]; // Importverzeichnis, z.B. 20171011_082351
+		string nvz; // Gesamtpfad Importverzeichnis, z.B. /DATA/Patientendokumente/HDalt/20171011_082351
 	public:
 		paramcl(const int argc, const char *const *const argv,const int obverb=0, const int oblog=0);
     void pruefggfmehrfach();
 		void getcommandl0();
     void rufpruefsamba();
 		int  initDB();
-		void pruefdictab(const int aktc);
+		void pruefdictab();
+		int dorueck();
     void autofkonfschreib();
 		void MusterVorgb();
 		void VorgbSpeziell() 
@@ -68,6 +73,7 @@ class paramcl: public haupt // Programmparameter
 		void lieskonfein();
 		int  getcommandline();
 		void rueckfragen();
+		void machimpvz();
 		void verschieb();
 		void zeigdienste();
 		void pruefdcmj();

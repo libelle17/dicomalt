@@ -465,6 +465,8 @@ const char *kons_T[T_konsMAX+1][SprachZahl]=
 	{"' nicht als Sambafreigabe gefunden, wird ergaenzt in '","' not found as or under a samba share, amending it in '"},
 	// T_fuer_Benutzer
 	{" fuer Benutzer '"," for user '"},
+	// T_prueftif
+	{"prueftif()","checktif()"},
   {"",""}
 }; // const char *Txkonscl::TextC[T_konsMAX+1][SprachZahl]=
 
@@ -4888,6 +4890,26 @@ int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const stri
 	return ret;
 } // int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/,uchar ohneconf/*=0*/)
 
+// aufgerufen in: pruefhyla, empfcapi
+void haupt::prueftif()
+{
+	Log(violetts+Txk[T_prueftif]+schwarz);
+	linstp->doggfinst("cmake",obverb,oblog); 
+	const string proj="tiff_copy";
+	holvomnetz(proj);
+	kompilbase(proj,s_gz);
+	string ivp=instvz+vtz+proj;
+	const string bef="cd \""+ivp+"\""
+		"&& rm -f CMakeCache.txt"
+		"&& sed -i.bak s\"/uint16 Param;/uint32 Param;/\" libtiff/tif_fax3.h"
+		"&& cmake -DCMAKE_INSTALL_PREFIX=/usr -DLIBTIFF_ALPHA_VERSION=1 . "
+		"&& make";
+	if (!(systemrueck(bef,obverb,oblog,/*rueck=*/0,/*obsudc=*/0)))
+		systemrueck("cd \""+ivp+"\" && make install",obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+	anfgg(unindt,"cd \""+ivp+"\" && cat install_manifest.txt|"+sudc+linstp->xargspf+" rm; cd \""+instvz+"\"",bef,obverb,oblog);
+} // void paramcl::prueftif()
+
+
 int haupt::kompiliere(const string& was,const string& endg, const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/)
 {
 	if (!kompilbase(was,endg)) {
@@ -4942,26 +4964,27 @@ void haupt::gcl0()
 	for(unsigned iru=0;iru<3;iru++) {
 		switch (iru) {
 			case 0:
-				opts.push_back(/*2*/optioncl(T_lg_k,T_language_l, &Txk,T_sprachstr,1,&langu,psons,&agcnfA,"language",&oblgschreib));
+				opts.push_back(/*2*/optioncl(T_lg_k,T_language_l, &Txk,T_sprachstr,/*wi=*/1,&langu,psons,&agcnfA,"language",&oblgschreib));
 				agcnfA.setzbemv("language",&Txk,T_sprachstr,1);
-				opts.push_back(/*2*/optioncl(T_lang_k,T_lingue_l, &Txk,-1,1,&langu,psons));
+				opts.push_back(/*2*/optioncl(T_lang_k,T_lingue_l, &Txk,-1,/*wi=*/1,&langu,psons));
 				break;
 			case 1:
-				opts.push_back(/*4*/optioncl(T_v_k,T_verbose_l, &Txk, T_Bildschirmausgabe_gespraechiger,1,&plusverb,1));
+				opts.push_back(/*4*/optioncl(T_v_k,T_verbose_l, &Txk, T_Bildschirmausgabe_gespraechiger,/*wi=*/1,&plusverb,/*wert=*/1));
 				loggespfad=logvz+vtz+logdname;
 				logdt=&loggespfad.front();
-				opts.push_back(/*2*/optioncl(T_lvz_k,T_logvz_l, &Txk, T_waehlt_als_Logverzeichnis_pfad_derzeit,0,&logvz, pverz,&agcnfA,"logvz",&logvneu));
-				opts.push_back(/*3a*/optioncl(T_ld_k,T_logdname_l, &Txk, T_logdatei_string_im_Pfad, 0, &logvz, T_wird_verwendet_anstatt, &logdname, psons,
-							&agcnfA,"logdname",&logdneu));
-				opts.push_back(/*3b*/optioncl(T_l_k,T_log_l,&Txk, T_protokolliert_ausfuehrlich_in_Datei, 1, &loggespfad, T_sonst_knapper, &oblog,pzahl,
-							&agcnfA,"oblog",&obkschreib));
+				opts.push_back(/*2*/optioncl(T_lvz_k,T_logvz_l, &Txk, T_waehlt_als_Logverzeichnis_pfad_derzeit,/*wi=*/0,&logvz, pverz,
+							&agcnfA,"logvz",&logvneu));
+				opts.push_back(/*3a*/optioncl(T_ld_k,T_logdname_l, &Txk, T_logdatei_string_im_Pfad, /*wi=*/0, &logvz, T_wird_verwendet_anstatt, 
+							&logdname, psons, &agcnfA,"logdname",&logdneu));
+				opts.push_back(/*3b*/optioncl(T_l_k,T_log_l,&Txk, T_protokolliert_ausfuehrlich_in_Datei, /*wi=*/1, &loggespfad, T_sonst_knapper, 
+							&oblog,pzahl, &agcnfA,"oblog",&obkschreib));
 				logdt=&loggespfad.front();
-				opts.push_back(/*4*/optioncl(T_ldn_k,T_logdateineu_l, &Txk, T_logdatei_vorher_loeschen, 0, &logdateineu, 1));
+				opts.push_back(/*4*/optioncl(T_ldn_k,T_logdateineu_l, &Txk, T_logdatei_vorher_loeschen, /*wi=*/0, &logdateineu, /*wert=*/1));
 				break;
 			case 2:
-				opts.push_back(/*2*/optioncl(T_kd_k,T_konfdatei_l, &Txk, T_verwendet_Konfigurationsdatei_string_anstatt,0,&akonfdt,pfile));
+				opts.push_back(/*2*/optioncl(T_kd_k,T_konfdatei_l, &Txk, T_verwendet_Konfigurationsdatei_string_anstatt,/*wi=*/0,&akonfdt,pfile));
 				// Hilfe zur Aktualisierung der manpages
-				opts.push_back(/*4*/optioncl(T_sh,T_standardhilfe, &Txk, -1, -1, &obhilfe,3));
+				opts.push_back(/*4*/optioncl(T_sh,T_standardhilfe, &Txk, -1, /*wi=*/-1, &obhilfe,/*wert=*/3));
 				break;
 		} //     switch (iru)
 		// hier wird die Befehlszeile ueberprueft:

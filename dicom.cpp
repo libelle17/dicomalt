@@ -53,6 +53,7 @@ enum T_
 	T_TransducerData,
 	T_ProcessingFunction,
 	T_Aufnahmedatum,
+	T_Importdatum,
 	T_Arzt,
 	T_Tabelle_fuer_dicom_Bilder,
 	T_Fehler_beim_Pruefen_von_dictab,
@@ -182,6 +183,11 @@ enum T_
 	T_Fehler_beim_Datumsetzen_von,
 	T_in_Datenbank,
 	T_jahr,
+	T_letzten_Import_rueckgaengig,
+	T_rueck_k,
+	T_rueck_l,
+	T_Keine_Dateien_in,
+	T_Gefunden,
 	T_MAX
 };
 char const *DPROG_T[T_MAX+1][SprachZahl]={
@@ -205,6 +211,8 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
  {"Programm","program"},
  // T_Aufnahmedatum
  {"Aufnahmedatum","acquisition date"},
+ // T_Importdatum
+ {"Importdatum","import date"},
  // T_Arzt
  {"Arzt","Physician"},
  // T_Tabelle_fuer_dicom_Bilder
@@ -465,6 +473,16 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
 	{"' in Datenbank '","' in database '"},
 	// T_jahr
 	{"<jahr>","<year>"},
+	// T_letzten_Import_rueckgaengig
+	{"letzten Import rückgängig machen","revert last import"},
+	// T_rueck_k
+	{"rueck","back"},
+	// T_rueck_l
+	{"rueck","back"},
+	// T_Keine_Dateien_in
+	{"Keine Dateien in '","No files found in '"},
+	// T_Gefunden
+	{"' gefunden!","'!"},
  {"",""}
 }; // char const *DPROG_T[T_MAX+1][SprachZahl]=
 class TxB Tx((const char* const* const* const*)DPROG_T);
@@ -512,7 +530,7 @@ int paramcl::initDB()
  return 0;
 } // int paramcl::initDB()
 
-void paramcl::pruefdictab(const int aktc)
+void paramcl::pruefdictab()
 {
  Log(violetts+Tx[T_pruefdictab]+schwarz,obverb,oblog);
  Feld felder[]= {
@@ -527,13 +545,27 @@ void paramcl::pruefdictab(const int aktc)
   Feld("TransducerData","varchar","1","",Tx[T_TransducerData],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("ProcessingFunction","varchar","1","",Tx[T_ProcessingFunction],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("Aufnahmedatum","datetime","0","0",Tx[T_Aufnahmedatum],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
+  Feld("Importdatum","datetime","0","0",Tx[T_Importdatum],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
  };
  Tabelle tad(My,tbn,felder,sizeof felder/sizeof *felder,/*indices=*/0,/*index size*/0,Tx[T_Tabelle_fuer_dicom_Bilder]);
  if (tad.prueftab(aktc,obverb)) {
   Log(rots+Tx[T_Fehler_beim_Pruefen_von_dictab]+schwarz,1,1);
 	exit(11);
  }
-} // void paramcl::pruefdictab(int aktc)
+} // void paramcl::pruefdictab()
+
+int paramcl::dorueck()
+{
+	int erg=0;
+		char ***cerg;
+	RS ldat(My,"select date_format(max(aufnahmedatum),'%Y%m%d_%k%i%S') p0 from fotosinp.dictab",aktc,ZDB);
+		if (cerg=ldat.HolZeile(),cerg?*cerg:0) {
+			caus<<cjj(cerg,0)<<endl;
+		} else {
+			erg=10;
+		}
+ return erg;
+}
 
 paramcl::paramcl(const int argc, const char *const *const argv,const int obverb/*=0*/, const int oblog/*=0*/)
 	// implizit wird haupt() aufgerufen
@@ -603,6 +635,7 @@ int paramcl::getcommandline()
 	opts.push_back(/*3*/optioncl(T_cm_k,T_cronminuten_l,&Tx,T_Alle_wieviel_Minuten_soll,1,&meinname,T_aufgerufen_werden_0_ist_gar_nicht,&cronminut,
 				pzahl, &agcnfA,"cronminut",&obkschreib));
 	opts.push_back(/*4*/optioncl(T_autoupd_k,T_autoupd_l, &Tx, T_Programm_automatisch_aktualisieren,1,&autoupd,1,&agcnfA,"autoupd",&obkschreib));
+	opts.push_back(/*4*/optioncl(T_rueck_k,T_rueck_l, &Tx, T_letzten_Import_rueckgaengig, 1, &obrueck,1));
 	////  opts.push_back(optioncl("l","log", &Tx, T_protokolliert_ausfuehrlich_in_Datei+drot+loggespfad+schwarz+Tx[T_sonst_knapper],0,&oblog,1));
 	////  logdt=&loggespfad.front();
 	////  opts.push_back(optioncl("lvz","logvz",&Tx, T_waehlt_als_Logverzeichnis_pfad_anstatt,0,&logvz,pverz));
@@ -735,6 +768,7 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 	einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[8]));
 	strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
 	einf.push_back(instyp(pm.My->DBS,"Aufnahmedatum",&tma));
+	einf.push_back(instyp(pm.My->DBS,"Importdatum",pm.jtp));
 	ord[adnr].insert(8,"_");
 	svec eindfeld;
 	eindfeld<<"PatientName";
@@ -765,8 +799,16 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 	if (id.empty()) {
 		Log(rots+bname+schwarz+" schon da!",pm.obverb,pm.oblog);
 	} else {
-		string neuname=pm.zvz+"/"+bname+".png";
-		systemrueck("dcmj2pnm +on2 '"+name+"' > '"+neuname+"'",pm.obverb,pm.oblog);
+		const string neuname=pm.zvz+"/"+bname+".png";
+		for(int iru=0;iru<2;iru++) {
+			svec srueck;
+			systemrueck("dcmj2pnm +on2 '"+name+"' > '"+neuname+"'",pm.obverb,pm.oblog,&srueck);
+			if (srueck.size()) {
+						if (srueck[0].find("no version information")==string::npos)
+							break;
+			}
+			pm.prueftif();
+		} // 		for(int iru=0;iru<2;iru++)
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
 			pm.umz++;
@@ -779,9 +821,15 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 			if (utime(neuname.c_str(),&ub)) {
 				Log(rots+Tx[T_Fehler_beim_Datumsetzen_von]+blau+neuname+"'"+schwarz,pm.obverb,pm.oblog);
 			}
-			systemrueck("chown sturm:praxis '"+neuname+"'",pm.obverb,pm.oblog);
-			const string cmd="cp -a '"+neuname+"' '"+pm.z2vz+vtz+jahr+vtz+"'";
-			pm.u2z+=!systemrueck(cmd,pm.obverb,pm.oblog);
+			uid_t duid;
+			gid_t dgid;
+			untersuser(pm.duser,&duid,&dgid);
+			systemrueck("chown "+pm.duser+":"+ltoan(dgid)+" '"+neuname+"'",pm.obverb,pm.oblog);
+			const string z2vzj=pm.z2vz+vtz+jahr;
+			if (!pruefverz(z2vzj,pm.obverb,pm.oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/pm.duser,/*benutzer=*/pm.duser,/*obmachen=*/1)) {
+				const string cmd="cp -a '"+neuname+"' '"+z2vzj+"'";
+				pm.u2z+=!systemrueck(cmd,pm.obverb,pm.oblog);
+			} // 			if (!pruefverz(z2vzj,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1))
 		} else {
 			RS weg(pm.My,"DELETE FROM `"+pm.tbn+"` WHERE ID="+id,aktc,ZDB);
 		} // 		if (!lstat(neuname.c_str(),&nst)) else
@@ -817,22 +865,26 @@ void paramcl::schlussanzeige()
 	::Log(blaus+ltoan(dbz,10,0,5)+schwarz+Tx[T_Datensaetze_in_Tabelle]+blau+tbn+schwarz+Tx[T_in_Datenbank]+blau+dbn+schwarz+Tx[T_eingetragen],1,1);
 	::Log(blaus+ltoan(umz,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+zvz+schwarz+Tx[T_erstellt],1,1);
 	::Log(blaus+ltoan(u2z,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+z2vz+vtz+Tx[T_jahr]+schwarz+Tx[T_kopiert],1,1);
-	::Log(blaus+(ret?Tx[T_Keine]:Tx[T_Alle])+schwarz+Tx[T_Dateien_von]+blau+qvz+schwarz+Tx[T_nach_]+blau+avz+schwarz+Tx[T_verschoben],1,1);
+	::Log(blaus+(pfehler?Tx[T_Keine]:Tx[T_Alle])+schwarz+Tx[T_Dateien_von]+blau+qvz+schwarz+Tx[T_nach_]+blau+avz+schwarz+Tx[T_verschoben],1,1);
 	haupt::schlussanzeige();
 } // void paramcl::schlussanzeige()
 
+void paramcl::machimpvz()
+{
+	time_t jetzt;
+	time(&jetzt);
+	jtp=localtime(&jetzt);
+	strftime(impvz,16,"%Y%m%d_%H%M%S",jtp);
+	nvz=avz+vtz+impvz;
+	pfehler= pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
+} // void paramcl::machimpvz()
+
 void paramcl::verschieb()
 {
-		time_t jetzt;
-		time(&jetzt);
-		struct tm *jtp;
-		jtp=localtime(&jetzt);
-		char zbuf[16];
-		strftime(zbuf,16,"%Y%m%d_%H%M%S",jtp);
-		const string nvz=avz+vtz+zbuf;
-		pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
+	if (!pfehler) {
 		const string cmd="mv -n '"+qvz+vtz+"'* '"+nvz+vtz+"'";
-		ret=systemrueck(cmd,obverb,oblog);
+		pfehler=systemrueck(cmd,obverb,oblog);
+	}
 } // void paramcl::verschieb()
 
 // wird aufgerufen in: main
@@ -1007,19 +1059,22 @@ int main(int argc, char** argv)
 		if (pm.initDB())
 			return 10;
 		// pruefe Tabelle <spooltab> und stelle sie ggf. her
-		pm.pruefdictab(pm.aktc);
+		pm.pruefdictab();
 	} // 	if (!pm.keineverarbeitung)
 	//	pruefverz(zvz,obverb,0,1,1,"sturm","sturm");
 	if (pm.initDB())
 		return 10;
 	if (!pm.My) exit(5); // Datenbankverbindung nicht erstellbar
+	if (pm.obrueck) 
+		return pm.dorueck();
 	svec rueck;
 	systemrueck("find "+pm.qvz+" -type f -not -path '*\\.*' -not -path '*DICOMDIR*'",pm.obverb,pm.oblog,&rueck);
 	if (!rueck.size()) {
-	 Log(rots+"Keine Dateien in '"+blau+pm.qvz+rot+"' gefunden!"+schwarz,1,0);
-	 pm.ret=1;
+	 Log(rots+Tx[T_Keine_Dateien_in]+blau+pm.qvz+rot+Tx[T_Gefunden]+schwarz,1,0);
+	 pm.pfehler=1;
 	} else {
 		pm.dcz=rueck.size();
+		pm.machimpvz();
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
 			if (dat.inDB(pm,pm.aktc))
@@ -1034,5 +1089,5 @@ int main(int argc, char** argv)
 	} // 	if (pm.autoupd && pm.tagesaufr == 2)
 	pm.schlussanzeige();
 	Log(violetts+Txk[T_Ende]+schwarz,pm.obverb,pm.oblog);
-	return pm.ret;
+	return pm.pfehler;
 } // int main(int argc, char** argv)

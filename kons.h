@@ -362,6 +362,7 @@ enum Tkons_
 	T_Verzeichnis,
 	T_nicht_als_Sambafreigabe_gefunden_wird_ergaenzt_in,
 	T_fuer_Benutzer,
+	T_prueftif,
 	T_konsMAX
 };
 
@@ -1136,6 +1137,7 @@ class haupt
 		int kompilbase(const string& was,const string& endg);
 		int kompiliere(const string& was,const string& endg,const string& vorcfg=nix,const string& cfgbismake=s_dampand);
 		int kompilfort(const string& was,const string& vorcfg=nix,const string& cfgbismake=s_dampand,uchar ohneconf=0);
+		void prueftif();
 		void zeigversion();
 		void zeigkonf();
 		void gcl0();
