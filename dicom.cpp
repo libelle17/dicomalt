@@ -190,7 +190,8 @@ enum T_
 	T_Gefunden,
 	T_Erstellt,
 	T_MAX
-};
+}; // enum T_
+
 char const *DPROG_T[T_MAX+1][SprachZahl]={
  // T_pruefdictab
  {"pruefdictab()","checkdictab()"},
