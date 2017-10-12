@@ -571,18 +571,8 @@ int paramcl::dorueck()
  return erg;
 }
 
-paramcl::paramcl(const int argc, const char *const *const argv,const int obverb/*=0*/, const int oblog/*=0*/)
-	// implizit wird haupt() aufgerufen
+paramcl::paramcl(const int argc, const char *const *const argv,const int obverb/*=0*/, const int oblog/*=0*/):haupt(argc,argv)
 {
-	cl=argv[0];
-	for(int i=1;i<argc;i++)
-		if (argv[i][0]) {
-			argcmv.push_back(argcl(i,argv)); 
-			cl+=" ";
-			cl+=argv[i];
-		} //     if (argv[i][0])
-	tstart=clock();
-	langu=holsystemsprache(obverb);
 	//  akonfdt.clear();
 } // paramcl::paramcl()
 
@@ -880,7 +870,7 @@ void paramcl::machimpvz()
 {
 	time_t jetzt;
 	time(&jetzt);
-	memcpy(jt,localtime(&jetzt),sizeof jt);
+	memcpy(&jt,localtime(&jetzt),sizeof jt);
 	strftime(impvz,16,"%Y%m%d_%H%M%S",&jt);
 	nvz=avz+vtz+impvz;
 	pfehler= pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);

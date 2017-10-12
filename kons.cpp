@@ -468,6 +468,10 @@ const char *kons_T[T_konsMAX+1][SprachZahl]=
 	{" fuer Benutzer '"," for user '"},
 	// T_prueftif
 	{"prueftif()","checktif()"},
+	// T_holsystemsprache
+	{"holsystemsprache()","fetchingsystemlanguage()"},
+	// T_haupt_haupt
+	{"haupt::haupt()","haupt::haupt()"},
   {"",""}
 }; // const char *Txkonscl::TextC[T_konsMAX+1][SprachZahl]=
 
@@ -829,6 +833,8 @@ int getcols()
 
 string holsystemsprache(int obverb/*=0*/)
 {
+	if (obverb)
+		cout<<violett<<Txk[T_holsystemsprache]<<schwarz<<endl;
 	schlArr cglangA; // Systemsprach-Konfiguration
 	string ret;
 	// OpenSuse, Fedora, Debian
@@ -4796,10 +4802,32 @@ const string s_gz="gz";
 const string& defvors="https://github.com/"+gitv+"/";
 const string& defnachs="/archive/master.tar.gz";
 
-haupt::haupt()
+haupt::haupt(const int argc, const char *const *const argv)
 {
+	tstart=clock();
+	cl=argv[0];
+	for(int i=1;i<argc;i++)
+		if (argv[i][0]) {
+			if (!obverb && argv[i][1]) {
+				Sprache altSpr=Txk.lgn;
+				for(int akts=0;akts<SprachZahl;akts++) {
+					Txk.lgn=(Sprache)akts;
+					if ((strchr("-/",argv[i][0])&&!strcmp(argv[i]+1,Txk[T_v_k])) || 
+						  (!strncmp(argv[i],"--",2)&&!strcmp(argv[i]+2,Txk[T_verbose_l]))) { // -v, -w, -verbose, -wortreich
+						cout<<violett<<Txk[T_haupt_haupt]<<schwarz<<endl;
+						obverb=1;
+					} // if ((strchr...
+				} //         for(int akts=0;akts<SprachZahl;akts++)
+				Txk.lgn=altSpr;
+			} // 			if (!obverb && argv[i][1])
+			argcmv.push_back(argcl(i,argv)); 
+			cl+=" ";
+			cl+=argv[i];
+		} //     if (argv[i][0])
+	langu=holsystemsprache(obverb);
 	pthread_mutex_init(&printf_mutex, NULL);
 	pthread_mutex_init(&getmutex, NULL);
+	pthread_mutex_init(&timemutex, NULL);
 	mpfad=meinpfad();
 	meinname=base_name(mpfad); // argv[0];
 	pruefinstv();

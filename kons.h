@@ -163,7 +163,7 @@ class TxB // Text-Basisklasse
     TCtp *hilf = reinterpret_cast<TCtp*>(TCp);
     return (const char*)hilf[nr][lgn];
   }
-};
+}; // class TxB // Text-Basisklasse
 
 string meinpfad();
 
@@ -363,8 +363,10 @@ enum Tkons_
 	T_nicht_als_Sambafreigabe_gefunden_wird_ergaenzt_in,
 	T_fuer_Benutzer,
 	T_prueftif,
+	T_holsystemsprache,
+	T_haupt_haupt,
 	T_konsMAX
-};
+}; // Tkons_
 
 extern const string sprachstr;
 /*
@@ -1118,7 +1120,7 @@ class haupt
 		void tucronschreib(const string& zsauf,const uchar cronzuplanen,const string& cbef);
 		void vischluss(string& erg);
 	public:
-		haupt();
+		haupt(const int argc, const char *const *const argv);
 		~haupt();
 		int Log(const string& text,const bool oberr=0,const short klobverb=0) const;
     int pruefinstv();
