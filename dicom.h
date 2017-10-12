@@ -74,6 +74,7 @@ class paramcl: public haupt // Programmparameter
 		int  getcommandline();
 		void rueckfragen();
 		void machimpvz();
+		void pruefimpvz();
 		void verschieb();
 		void zeigdienste();
 		void pruefdcmj();

@@ -875,6 +875,11 @@ void paramcl::machimpvz()
 	nvz=avz+vtz+impvz;
 } // void paramcl::machimpvz()
 
+void paramcl::pruefimpvz()
+{
+		pfehler= pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
+} // void paramcl::pruefimpvz()
+
 void paramcl::verschieb()
 {
 	if (!pfehler) {
@@ -1070,7 +1075,7 @@ int main(int argc, char** argv)
 	 Log(rots+Tx[T_Keine_Dateien_in]+blau+pm.qvz+rot+Tx[T_Gefunden]+schwarz,1,0);
 	 pm.pfehler=1;
 	} else {
-		pm.pfehler= pruefverz(pm.nvz,pm.obverb,pm.oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/pm.duser,/*benutzer=*/pm.duser,/*obmachen=*/1);
+		pm.pruefimpvz();
 		pm.dcz=rueck.size();
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
