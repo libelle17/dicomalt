@@ -873,7 +873,6 @@ void paramcl::machimpvz()
 	memcpy(&jt,localtime(&jetzt),sizeof jt);
 	strftime(impvz,16,"%Y%m%d_%H%M%S",&jt);
 	nvz=avz+vtz+impvz;
-	pfehler= pruefverz(nvz,obverb,oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/duser,/*benutzer=*/duser,/*obmachen=*/1);
 } // void paramcl::machimpvz()
 
 void paramcl::verschieb()
@@ -1064,14 +1063,15 @@ int main(int argc, char** argv)
 	if (!pm.My) exit(5); // Datenbankverbindung nicht erstellbar
 	if (pm.obrueck) 
 		return pm.dorueck();
+	pm.machimpvz();
 	svec rueck;
 	systemrueck("find "+pm.qvz+" -type f -not -path '*\\.*' -not -path '*DICOMDIR*'",pm.obverb,pm.oblog,&rueck);
 	if (!rueck.size()) {
 	 Log(rots+Tx[T_Keine_Dateien_in]+blau+pm.qvz+rot+Tx[T_Gefunden]+schwarz,1,0);
 	 pm.pfehler=1;
 	} else {
+		pm.pfehler= pruefverz(pm.nvz,pm.obverb,pm.oblog,/*obmitfacl=*/1,/*obmitcon=*/1,/*besitzer=*/pm.duser,/*benutzer=*/pm.duser,/*obmachen=*/1);
 		pm.dcz=rueck.size();
-		pm.machimpvz();
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
 			if (dat.inDB(pm,pm.aktc))
