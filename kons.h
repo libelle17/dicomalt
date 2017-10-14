@@ -80,18 +80,18 @@ int Log(const string& text,const short screen=1,const short file=1,const bool ob
 // #include <boost/algorithm/string.hpp> // clock, numeric_limits
 #include <boost/locale.hpp> // fuer to_upper und to_lower
 // #include <limits>
-extern boost::locale::generator gen; // fuer to_upper, to_lower
-extern std::locale loc;
+extern const boost::locale::generator gen; // fuer to_upper, to_lower
+extern const std::locale loc;
 
 typedef unsigned char uchar; // 1 Byte
 enum binaer:uchar {falsch,wahr};
 enum Sprache {deutsch,englisch,SprachZahl};
-extern const char *dir;
-extern const char *tmmoegl[2];
+extern const char *const dir;
+extern const char *const tmmoegl[2];
 //extern const string datei;
 // extern const char *rot, *weinrot, *schwarz, *blau, *gelb; // muss spaeter kompilerunabhaengig
-extern const char *schwarz, *dgrau, *drot, *rot, *gruen, *hgruen, *braun, *gelb, *blau, *dblau, *violett, *hviolett,
-       *tuerkis, *htuerkis, *hgrau, *weiss, *umgek;
+extern const char *const schwarz, *const dgrau, *const drot, *const rot, *const gruen, *const hgruen, *const braun, *const gelb,
+			 *const blau, *const dblau, *const violett, *const hviolett, *const tuerkis, *const htuerkis, *const hgrau, *const weiss, *const umgek;
 extern const string drots,rots,schwarzs,blaus,dblaus,gelbs,tuerkiss,hgraus,violetts,gruens;
 #ifdef linux
 extern const char *_rot, *_hrot, *_schwarz, *_blau, *_gelb, *_tuerkis, *_hgrau;
@@ -540,7 +540,6 @@ void anfgw(const string& datei, const string& udpr, const string& inhalt, const 
 void anfgg(const string& datei, const string& inhalt, const string& comment, int obverb/*=0*/, int oblog/*=0*/);
 void doanfg(const string& datei, const string& inhalt, const string& comment);
 
-double progvers(const string& prog,int obverb=0, int oblog=0);
 int touch(const std::string& pathname,int obverb=0,int oblog=0);
 std::string string_to_hex(const std::string& input);
 int dateivgl(const string& d1, const string& d2,uchar obzeit=0);
@@ -1080,6 +1079,7 @@ class haupt
 		static const string edit;
 		static const string passwddt, groupdt, sudoersdt;
 		static const char* const smbdt;// "/etc/samba/smb.conf"
+		uchar autoupd;  // 1=Programm automatisch updadaten
 	public:
     int obverb=0; // verbose
     int oblog=0;  // mehr Protokollieren
@@ -1091,6 +1091,10 @@ class haupt
     string cmd; // string fuer command fuer Betriebssystembefehle
     vector<optioncl> opts;
 		vector<argcl> argcmv; // class member vector
+		ulong aufrufe=0; // Zahl der bisherigen Programmaufrufe
+		struct tm laufrtag={0}; // Tag des letztes Aufrufs
+		ulong tagesaufr=0; // Zahl der bisherigen Programmaufrufe heute
+		ulong monatsaufr=0; // Zahl der bisherigen Programmaufrufe heute
     uchar oblgschreib=0; // Konfigurationsdatei seitens der Sprache voraussichtlich schreiben
     uchar obkschreib=0; // Konfigurationsdatei schreiben
     uchar logdneu=0;    // Logdatei geaendert
@@ -1105,10 +1109,6 @@ class haupt
     schlArr agcnfA; // Gesamtkonfiguration
 		string azaehlerdt; // akonfdt+".zaehl"
 		schlArr zcnfA; // Zaehlkonfiguration
-		ulong aufrufe=0; // Zahl der bisherigen Programmaufrufe
-		struct tm laufrtag={0}; // Tag des letztes Aufrufs
-		ulong tagesaufr=0; // Zahl der bisherigen Programmaufrufe heute
-		ulong monatsaufr=0; // Zahl der bisherigen Programmaufrufe heute
     string saufr[2]; // (stummaufruf) '<DPROG> -noia >/dev/null 2>&1'
 		string zsaufr[2]; // zitiert saufr (in sed)
 		string vorcm; // Vor-Cron-Minuten
@@ -1139,6 +1139,7 @@ class haupt
 		int kompilbase(const string& was,const string& endg);
 		int kompiliere(const string& was,const string& endg,const string& vorcfg=nix,const string& cfgbismake=s_dampand);
 		int kompilfort(const string& was,const string& vorcfg=nix,const string& cfgbismake=s_dampand,uchar ohneconf=0);
+		double progvers(const string& prog);
 		void prueftif();
 		void zeigversion();
 		void zeigkonf();

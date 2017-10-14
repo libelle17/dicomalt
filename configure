@@ -68,7 +68,7 @@ getIPR() {
 			UPR="${SUDC}urpme ";
 			dev=devel;
 			LT=${_LT}-${dev};
-			libmc1=lib64mariadb;
+			libmac=lib64mariadb;
 			COMP="make automake gcc-c++ kernel-devel";
 		} 
 	} || 
@@ -81,14 +81,14 @@ getIPR() {
 			COMP="make automake base-devel";
 			UPR="${SUDC}pacman -R ";
 			SPR="pacman -Qi ";
-			libmc1="libmysqlclient libmysqlclient"
+			libmac="libmysqlclient libmysqlclient"
 			UDPR="${SUDC}pacman -Rd ";
 		};
 	}
 	[ $fed = 1 ] && 
 	{ 
 		libmc=mysql;
-		libmc1=mariadb;
+		libmac=mariadb;
 		COMP="make automake gcc-c++ kernel-devel";
 		IP_R="${SUDC}$IdPR";
 		LBIO=boost-iostreams
@@ -115,13 +115,17 @@ getIPR() {
 			UDPR="${SUDC}apt-get -f install; ${SUDC}dpkg -r --force-depends ";
 		};
 	}
+	for A in $(ls|grep "\.cpp$\|\.h$");do [ -f "$A" ]&& grep -q "^#include[ ]*<mysql.h>" "$A" &&break;done ||libmac=;
+	for A in $(ls|grep "\.cpp$\|\.h$");do [ -f "$A" ]&& grep -q "^#include[ ]*<boost" "$A" &&break;done ||LBOOST=;
+	for A in $(ls|grep "\.cpp$\|\.h$");do [ -f "$A" ]&& grep -q "^#include[ ]*<tiffio.h>" "$A" &&break;done ||LT=;
+	for A in $(ls|grep "\.cpp$\|\.h$");do [ -f "$A" ]&& grep -q "^#include .*acl.h>" "$A" &&break;done ||LACL=;
 	IPR="${SUDC}$IdPR";
 	DTN="`find . -maxdepth 1 -name ${DPROG}.cpp -printf '%f '``find . -maxdepth 1 -name ${DPROG}.h -printf '%f '``find . -maxdepth 1 \( -name '*.cpp' -or -name '*.h' \) -not -name "${DPROG}*" -printf '%f '|sort`man_?? Makefile configure install.sh viall .exrc $UNF $ILOG"
 }
 
 exportvars() {
 	rm -f vars;
-	for v in KR KF IPR IP_R UPR UDPR SPR UNROH UNF AUNF ILOG PGROFF LT LT5 LBOOST LBIO LBLO LACL LM18 dev libmc libmc1 REPOS UREPO COMP GITV DTN DPROG; do
+	for v in KR KF IPR IP_R UPR UDPR SPR UNROH UNF AUNF ILOG PGROFF LT LT5 LBOOST LBIO LBLO LACL LM18 dev libmc libmac REPOS UREPO COMP GITV DTN DPROG; do
 		eval nv=\$$v; 
 		printf "$v::=$nv\n">>vars; 
 	done;
@@ -244,7 +248,7 @@ KF=" 2>$DN" # keine Fehlermeldung
 PGROFF="groff-base groff"
 dev=devel
 libmc=libmysqlclient
-libmc1=libmariadbclient
+libmac=libmariadbclient
 fed=0
 Z=""
 [ "$(id -u)" -ne "0" ]&&SUDC="sudo "

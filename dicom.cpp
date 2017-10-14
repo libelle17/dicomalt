@@ -564,7 +564,7 @@ int paramcl::dorueck()
 		char ***cerg;
 	RS ldat(My,"select date_format(max(aufnahmedatum),'%Y%m%d_%k%i%S') p0 from fotosinp.dictab",aktc,ZDB);
 		if (cerg=ldat.HolZeile(),cerg?*cerg:0) {
-			caus<<cjj(cerg,0)<<endl;
+			//// <<cjj(cerg,0)<<endl;
 		} else {
 			erg=10;
 		}
@@ -803,7 +803,7 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 			} else {
 				break;
 			}
-			pm.prueftif();
+			// hier dcmt installieren
 		} // 		for(int iru=0;iru<2;iru++)
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
@@ -885,7 +885,7 @@ void paramcl::verschieb()
 	if (!pfehler) {
 		const string cmd="mv -n '"+qvz+vtz+"'* '"+nvz+vtz+"'";
 		pfehler=systemrueck(cmd,obverb,oblog);
-	}
+	} // 	if (!pfehler) 
 } // void paramcl::verschieb()
 
 // wird aufgerufen in: main
@@ -1024,7 +1024,15 @@ void paramcl::autofkonfschreib()
 
 int main(int argc, char** argv)
 {
+	//// <<TIFFGetVersion()<<endl;
 	paramcl pm(argc,argv,/*obverb=*/0,/*oblog=*/0); // Programmparameter
+	if (0) {
+		caus<<pm.progvers("dcmdump")<<endl;
+		caus<<pm.progvers("dcmj2pnm")<<endl;
+		caus<<pm.progvers("unpaper")<<endl;
+		caus<<pm.progvers("/root/autofax/ocrv/bin/ocrmypdf")<<endl;
+		caus<<pm.progvers("python3")<<endl;
+	}
 	pm.getcommandl0(); // anfangs entscheidende Kommandozeilenparameter abfragen
 	if (pm.obhilfe==3) { // Standardausgabe gewaehrleisten
 		pm.MusterVorgb();

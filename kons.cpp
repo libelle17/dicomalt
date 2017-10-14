@@ -12,28 +12,29 @@
 
 
 #ifdef _WIN32
-const char *dir = "dir ";
+const char *const dir = "dir ";
 #elif linux
-const char *dir = "ls -l ";
+const char *const dir = "ls -l ";
 #endif
-const char *tmmoegl[2]={"%d.%m.%y","%c"}; // Moeglichkeiten fuer strptime
+const char *const tmmoegl[2]={"%d.%m.%y","%c"}; // Moeglichkeiten fuer strptime
 // zum Schutz statischer Speicherbereiche vor gleichzeitigem Zugriff durch mehrere Programmfäden
 pthread_mutex_t printf_mutex, getmutex, timemutex;
 
 #ifdef linux
 #include <iomanip> // setprecision
 //// const char *rot="\e[1;31m", *weinrot="\e[31m", *schwarz="\e[0m", *blau="\e[34m", *gelb="\e[33m"; // muss spaeter kompilerunabhaengig 
-const char *schwarz="\e[0m", *dgrau="\e[1;30m", *drot="\e[0;31m", *rot="\e[1;31m", *gruen="\e[0;32m", *hgruen="\e[1;32m",
-      *braun="\e[0;33m",   *gelb="\e[1;33m",     *dblau="\e[0;34;1;47m",  *blau="\e[1;34m", *violett="\e[0;35m", *hviolett="\e[1;35m",
-      *tuerkis="\e[0;36m", *htuerkis="\e[1;36m", *hgrau="\e[0;37m", *weiss="\e[1;37m", *umgek="\e[7m";
+const char *const schwarz="\e[0m", *const dgrau="\e[1;30m", *const drot="\e[0;31m", *const rot="\e[1;31m",
+			*const gruen="\e[0;32m", *const hgruen="\e[1;32m", *const braun="\e[0;33m", *const gelb="\e[1;33m",
+			*const dblau="\e[0;34;1;47m", *const blau="\e[1;34m", *const violett="\e[0;35m", *const hviolett="\e[1;35m",
+      *const tuerkis="\e[0;36m", *const htuerkis="\e[1;36m", *const hgrau="\e[0;37m", *const weiss="\e[1;37m", *const umgek="\e[7m";
 const char *_drot=drot, *_rot=rot, *_schwarz=schwarz, *_blau=blau, *_gelb=gelb, *_tuerkis=tuerkis, *_hgrau=hgrau;
 //// char logdatei[PATH_MAX+1]="/DATA/down/log_termine.txt";
 #define _access access
 #include <sys/time.h>  // für gettimeofday()
 #elif defined _WIN32 // linux
-const char *drot="", *rot="", *schwarz="", *blau="", *gelb="", *tuerkis="", *hgrau="";
+const char *const drot="", *const rot="", *const schwarz="", *const blau="", *const gelb="", *const tuerkis="", *const hgrau="";
 ////ffen: bei den Farben muss unterschieden werden zwischen cout (-> _drot) und 
-printf(drot, unter windows escape-Sequenzen rausfielselen und durch SetConsoleTextAttribute-Aufrufe ersetzen)
+printf(drot, unter windows escape-Sequenzen rausfieselen und durch SetConsoleTextAttribute-Aufrufe ersetzen)
   ////char logdatei[PATH_MAX+1]="v:\log_termine.txt";
   template <class _Elem, class _Traits>
   std::basic_ostream<_Elem,_Traits>& operator<<(std::basic_ostream<_Elem,_Traits>& i, color& c){
@@ -43,8 +44,8 @@ printf(drot, unter windows escape-Sequenzen rausfielselen und durch SetConsoleTe
   }
 ////har logdatei[PATH_MAX+1]="v:\\log_termine.txt";
 #endif // linux elif defined _WIN32
-boost::locale::generator gen;
-std::locale loc = gen("en_US.UTF-8");
+const boost::locale::generator gen;
+const std::locale loc = gen("en_US.UTF-8");
 
 // z.B. "/root/autofax"
 const string& instvz=
@@ -1356,14 +1357,19 @@ double verszuzahl(const string vers)
 } // double verstozahl(string vers)
 
 // Programmversion, falls diese beim Programm mit " --version" abrufbar ist
-double progvers(const string& prog,int obverb/*=0*/, int oblog/*=0*/)
+double haupt::progvers(const string& prog)
 {
 	double vers=0;
 	string pfad;
 	if (obprogda(prog,obverb,oblog,&pfad)) {
 		svec urueck;
-		systemrueck(pfad+" --version",obverb,oblog,&urueck,/*obsudc=*/0);
-		if (urueck.size()) vers=verszuzahl(urueck[0].c_str());
+		systemrueck(pfad+" --version 2>&1",obverb,oblog,&urueck,/*obsudc=*/0);
+		if (urueck.size()) {
+			const string bas=base_name(pfad);
+			ulong pos=urueck[0].find(bas);
+			if (pos==string::npos) pos=0; else pos+=bas.length();
+			vers=verszuzahl(urueck[0].c_str()+pos);
+		} // 			if (urueck.size())
 	} // 	if (obprogda(prog,obverb,oblog,&pfad))
 	return vers;
 } // double progvers(string prog,int obverb, int oblog)
@@ -1371,9 +1377,9 @@ double progvers(const string& prog,int obverb/*=0*/, int oblog/*=0*/)
 #ifdef notwendig
 void kopierm(const string *quelle, const string *ziel)
 {
-  mdatei fileIn(quelle->c_str(),ios::in|ios::binary,0);
-  mdatei fileOut(ziel->c_str(),ios::out | ios::trunc | ios::binary,0);
-  fileOut<<fileIn.rdbuf();
+	mdatei fileIn(quelle->c_str(),ios::in|ios::binary,0);
+	mdatei fileOut(ziel->c_str(),ios::out | ios::trunc | ios::binary,0);
+	fileOut<<fileIn.rdbuf();
 } // void kopierm(const string *quelle, const string *ziel)
 #endif // notwendig
 
@@ -4931,7 +4937,7 @@ int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const stri
 	return ret;
 } // int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/,uchar ohneconf/*=0*/)
 
-// aufgerufen in: pruefhyla, empfcapi
+// aufgerufen bei autofax in: pruefhyla, empfcapi, rueckfragen
 void haupt::prueftif()
 {
 	Log(violetts+Txk[T_prueftif]+schwarz);
@@ -5583,23 +5589,36 @@ void haupt::dodovi(const svec d1,const svec d2)
 
 void haupt::update(const string& DPROG)
 {
-	perfcl perf("main");
-	if (systemrueck("wget https://raw.githubusercontent.com/"+gitv+"/"+DPROG+"/master/versdt -qO"+instvz+"/versdtakt&&"
-				/*//				"[ $(echo $(cat "+instvz+"/versdtakt)'>'$(cat "+instvz+"/versdt)|bc -l) -eq 0 ]",2,oblog))*/
-		// Berechnung mit |bc -l schlecht, da z.B. auf Ubuntu bc nicht unbedingt standardmäßig installiert
-		"awk \"BEGIN{print $(cat "+instvz+"/versdt)-$(cat "+instvz+"/versdtakt)}\"|grep -q ^-",obverb,oblog,/*rueck=*/0,/*obsudc=*/0)) {
-			::Log(violetts+DPROG+blau+Txk[T_muss_nicht_aktualisiert_werden]+schwarz,1,oblog);
-		} else {
-			////  struct stat entwst={0};
-			//// entwickeln muss genauso definiert sein wie in Makefile
-			////  const string ziel=instvz+(lstat((instvz+"/entwickeln").c_str(),&entwst)?nix:"/nvers");
-			const string ziel=instvz;
-			pruefverz(ziel,obverb,oblog);
-			::Log(violett+DPROG+blau+Txk[T_wird_aktualisiert_bitte_ggf_neu_starten]+schwarz,1,oblog);
-			systemrueck("M="+DPROG+"-master;wget "+defvors+DPROG+defnachs+" -O"+ziel+"/"+DPROG+".tar.gz >/dev/null 2>&1;"
-					"cd "+ziel+";rm -rf $M;tar xpvf "+DPROG+".tar.gz;cd $M;mv * ..;mv .* .. 2>/dev/null;cd ..;rmdir $M;./install.sh 2>/dev/null;",
-					1,oblog,/*rueck=*/0,/*obsudc=*/0);
-		} // if (systemrueck ... else
+	if (autoupd && tagesaufr == 2) {
+////		perfcl perf("main");
+		if (systemrueck("wget https://raw.githubusercontent.com/"+gitv+"/"+DPROG+"/master/versdt -qO"+instvz+"/versdtakt&&"
+					/*//				"[ $(echo $(cat "+instvz+"/versdtakt)'>'$(cat "+instvz+"/versdt)|bc -l) -eq 0 ]",2,oblog))*/
+			// Berechnung mit |bc -l schlecht, da z.B. auf Ubuntu bc nicht unbedingt standardmäßig installiert
+			"awk \"BEGIN{print $(cat "+instvz+"/versdt)-$(cat "+instvz+"/versdtakt)}\"|grep -q ^-",obverb,oblog,/*rueck=*/0,/*obsudc=*/0)) {
+
+				::Log(violetts+DPROG+blau+Txk[T_muss_nicht_aktualisiert_werden]+schwarz,1,oblog);
+			} else {
+				////  struct stat entwst={0};
+				//// entwickeln muss genauso definiert sein wie in Makefile
+				////  const string ziel=instvz+(lstat((instvz+"/entwickeln").c_str(),&entwst)?nix:"/nvers");
+				const string ziel=instvz;
+				pruefverz(ziel,obverb,oblog);
+				::Log(violett+DPROG+blau+Txk[T_wird_aktualisiert_bitte_ggf_neu_starten]+schwarz,1,oblog);
+				systemrueck("M="+DPROG+"-master;wget "+defvors+DPROG+defnachs+" -O"+ziel+"/"+DPROG+".tar.gz >/dev/null 2>&1;"
+						"cd "+ziel+";rm -rf $M;tar xpvf "+DPROG+".tar.gz;cd $M;mv * ..;mv .* .. 2>/dev/null;cd ..;rmdir $M;./install.sh 2>/dev/null;",
+						1,oblog,/*rueck=*/0,/*obsudc=*/0);
+			} // if (systemrueck ... else
+	} else if (!(tagesaufr % 5)) { // 	if (pm.autoupd && pm.tagesaufr == 2)
+		svec srueck;
+		systemrueck(mpfad+" -h 2>&1",obverb,oblog,&srueck);
+		if (srueck.size()) {
+			// wenn durch Systemupdate z.B. neue libtiff-Version eingespielt, dann wg.d.Fehlermeldung das aktuelle Programm nochmal dafür kompilieren
+			if (srueck[0].find("no version information")!=string::npos) {
+        systemrueck("cd '"+instvz+"';make neu install 2>/dev/null;",obverb,oblog);
+			}
+		} // 		if (srueck.size())
+	} // 	else if (tagesaufr % 5)  // 	if (pm.autoupd && pm.tagesaufr == 2)
+	//// <<"Tagesaufr: "<<tagesaufr<<endl;
 } // void haupt::update(const string& DPROG)
 
 const string	haupt::passwddt="/etc/passwd",
