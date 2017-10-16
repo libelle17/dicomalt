@@ -39,15 +39,6 @@
 ICH::=$(firstword $(MAKEFILE_LIST))
 SRCS::=$(wildcard *.cpp)
 OBJ::=$(SRCS:.cpp=.o)
-CFLAGSr::=-c -Wall `mysql_config --cflags`
-LDFLAGSr::=`mysql_config --libs` -ltiff -lboost_iostreams -lboost_locale -lacl
-ifdef mitpg
- CFLAGS::=$(CFLAGSr) -I/usr/include/pgsql -Dmitpostgres
- LDFLAGS::=$(LDFLAGSr) -lpq
-else
- CFLAGS::=$(CFLAGSr)
- LDFLAGS::=$(LDFLAGSr)
-endif
 # wenn aus vi aufgerufen, kein unnoetigen Ausgaben, BA=bedingte Ausgabe, BFA=bedingte Fehlerausgabe
 BA::=&1
 BFA::=2>>fehler.txt
@@ -82,24 +73,43 @@ GCCOK::=$(shell expr $(MAXGCCNR) \>= $(MINGCCNR))
 # 1=Debian usw., 2=Opensuse, 3=Fedora usw., 4=Magieia, 5=Manjaro usw.
 DISTR::=$(shell which apt>/dev/null 2>&1&&echo 1||{ which zypper>/dev/null 2>&1&&echo 2||{ which dnf>/dev/null 2>&1||which yum>/dev/null 2>&1&&echo 3||{ which urpmi.update>/dev/null 2>&1&&echo 4||{ which pacman>/dev/null 2>&1&&echo 5||echo 0;};};};})
 ifeq ($(GCCNEU),1)
-MINGCCNR::=$(MAXGCCNR)
+	MINGCCNR::=$(MAXGCCNR)
 endif
 CCName::=g++-$(MINGCCNR)
 ifeq ($(DISTR),1)
-CCName::=g++-$(MINGCCNR)
-CCInst::=gcc-$(MINGCCNR) g++-$(MINGCCNR)
+	CCName::=g++-$(MINGCCNR)
+	CCInst::=gcc-$(MINGCCNR) g++-$(MINGCCNR)
 endif
 ifeq ($(DISTR),2)
-OBEINS::=1
+	OBEINS::=1
 endif
 ifeq ($(DISTR),3)
-CCName::=g++
-OBEINS::=1
+	CCName::=g++
+	OBEINS::=1
 endif
 ifeq ($(OBEINS),1)
-CCInst::=gcc$(MINGCCNR) gcc$(MINGCCNR)-c++
+	CCInst::=gcc$(MINGCCNR) gcc$(MINGCCNR)-c++
 endif
 -include vars # wird durch install.sh generiert; CCInst muss vorher definiert werden, DPROG und GDAT dürfen nur nachher verwendet werden
+CFLAGS::=-c -Wall
+LDFLAGS::=
+ifneq ($(libmac),)
+	CFLAGS::=$(CFLAGS) `mysql_config --cflags`
+	LDFLAGS::=`mysql_config --libs`
+endif
+ifneq ($(LT),)
+	LDFLAGS::=$(LDFLAGS) -ltiff
+endif
+ifneq ($(LBOOST),)
+	LDFLAGS::=$(LDFLAGS) -lboost_iostreams -lboost_locale
+endif
+ifneq ($(LACL),)
+	LDFLAGS::=$(LDFLAGS) -lacl
+endif
+ifdef mitpg
+	CFLAGS::=$(CFLAGS) -I/usr/include/pgsql -Dmitpostgres
+	LDFLAGS::=$(LDFLAGS) -lpq
+endif
 PROGGROSS::=`echo $(DPROG) | tr a-z A-Z`
 EXEC::=$(DPROG)
 INSTEXEC::=$(EXPFAD)/$(EXEC)
@@ -107,15 +117,15 @@ GDAT::=$(DTN:inst.log=)
 GDAT::=$(GDAT:uninstallinv=)
 GDAT::=$(GDAT:Makefile=Makefile.roh)
 ifeq ($(DISTR),1)
-COMP::=$(COMP) $(CCInst)
+	COMP::=$(COMP) $(CCInst)
 endif
 CC::=$(CCName) # CC=$(SUDC)$(CCName)
 libmcd::=$(libmc)-$(dev)
-libmc1d::=$(libmc1)-$(dev)
+libmc1d::=$(libmac)-$(dev)
 pgd::=postgresql-$(dev)
 SUDC::=
 ifneq ($(shell echo $$EUID),0)
- SUDC::=sudo 
+	SUDC::=sudo 
 endif
 slc::=$(SUDC)/sbin/ldconfig
 # deinstallieren und Ueberschrift vormerken
@@ -293,21 +303,21 @@ endif
 	@[ "$(GCCOK)" = "1" ]||{ \
 	[ "$(DISTR)" = "1" ]&&{ $(SUDC)add-apt-repository ppa:ubuntu-toolchain-r/test;$(SUDC)apt-get update;};:;\
 	{ printf "Installiere/Installing Compiler ...\n" >$(BA);./configure inst "$(CCInst)" "$(COMP)";:;};}
-	-@for r in 1 2;do [ $$r = 1 ]&&{ lc="$(libmcd)";:;}||lc="$(libmc1d)";\
+	-@[ "$(libmac)" ]&&{ for r in 1 2;do [ $$r = 1 ]&&{ lc="$(libmcd)";:;}||lc="$(libmc1d)";\
 	[ -f /usr/include/mysql/mysql.h>$(KR) ]&& \
 	find $$(find /usr -maxdepth 1 -type d -name "lib*" $(KF)|sort -r) -regextype egrep -regex ".*libm(ysql|ariadb)client.so" -print -quit $(KF)|\
-  	grep ''>$(KR)&& break;\
-	./configure inst _ "$$lc" verbose; done
+	grep ''>$(KR)&& break;\
+	./configure inst _ "$$lc" verbose; done;}||:
 	-@[ -z $$mitpg ]||$(SPR) $(pgd)>$(KR)||{ ./configure inst _ "$(pgd)" verbose;$(slc);};
 # 3.5.17: auch libtiff5 hat gefehlt
-	-@for r in 1 2;do \
+	-@[ "$(LT)" ]&& for r in 1 2;do \
 	[ $$r = 1 ]&& LTakt="$(LT)" ||{ [ -z "$(LT5)" ]&&break;LTakt="$(LT5)";};\
 	find /usr/include -name tiff.h -print -quit $(KF)|grep ''>$(KR)&&\
 	find $$(find /usr -maxdepth 1 -name "lib*" $(KF)|sort -r) -type l -xtype f -name "libtiff.so" -print -quit $(KF)|grep ''>$(KR)&& break;\
 	./configure inst _ "$$LTakt" verbose;\
 	done; :;
-	-@[ -f /usr/include/sys/acl.h ]|| ./configure inst _ "$(LACL)" verbose;
-	-@$(SPR) $(LBOOST)>$(KR)|| ./configure inst _ "$(LBOOST)" verbose;
+	-@[ "$(LACL)" ]&&{ [ -f /usr/include/sys/acl.h ]|| ./configure inst _ "$(LACL)" verbose;}||:
+	-@[ "$(LBOOST)" ]&&{ $(SPR) $(LBOOST)>$(KR)|| ./configure inst _ "$(LBOOST)" verbose;}||:
 	-@[ "$(LBIO)" ]&&{ $(SPR) "$(LBIO)">$(KR)||./configure inst _ "$(LBIO)" verbose;}||:
 	-@[ "$(LBLO)" ]&&{ $(SPR) "$(LBLO)">$(KR)||./configure inst _ "$(LBLO)" verbose;}||:
 #//	-@[ -f /usr/include/boost/iostreams/device/mapped_file.hpp -o -f /usr/share/doc/libboost-dev ]|| ./configure inst _ "$(LBOOST)" verbose;

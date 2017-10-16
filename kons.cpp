@@ -2193,7 +2193,7 @@ std::string dir_name(const std::string& path)
 //  nur den Pfad /usr/bin:/bin (fedora und ubuntu) bzw. /usr/bin:/usr/sbin:/sbin:/bin:/usr/lib/news/bin:/root/bin (opensuse) erwarten
 int systemrueck(const string& cmd, char obverb/*=0*/, int oblog/*=0*/, vector<string> *rueck/*=0*/, const uchar obsudc/*=0*/,
     const int verbergen/*=0*/, int obergebnisanzeig/*wahr*/, const string& ueberschr/*=nix*/,vector<errmsgcl> *errm/*=0*/,uchar obincron/*=0*/,
-		stringstream *ausgp/*=0*/)
+		stringstream *ausgp/*=0*/,uchar obdirekt/*=0*/)
 {
 // verbergen: 0 = nichts, 1= '2>/dev/null' anhaengen + true zurueckliefern, 2='>/dev/null 2>&1' anhaengen + Ergebnis zurueckliefern
   binaer ob0heissterfolg=wahr;
@@ -2234,7 +2234,8 @@ int systemrueck(const string& cmd, char obverb/*=0*/, int oblog/*=0*/, vector<st
   } else {
     aktues=ueberschr;
   } //   if (ueberschr.empty())
-	const string bef=(obsudc?sudc+(obsudc==2&&!sudc.empty()?"-H ":""):"")+"env PATH='"+spath+"' "+"sh -c '"+ersetzAllezu(hcmd,"'","'\\''")+"'";
+	const string bef=(obsudc?sudc+(obsudc==2&&!sudc.empty()?"-H ":""):"")+
+		(obdirekt?hcmd:"env PATH='"+spath+"' "+"sh -c '"+ersetzAllezu(hcmd,"'","'\\''")+"'");
 	string hsubs=bef.substr(0,getcols()-7-aktues.length());
 	string meld=aktues+": "+blau+hsubs+schwarz+" ...";
 	if (ausgp&&obverb) *ausgp<<meld<<endl; else Log(meld,obverb>0?-1:0,oblog);
@@ -4917,19 +4918,24 @@ int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const stri
 			////						"&&"+sudc+"make uninstall; cd \\\"\\$H\\\"\\n\" >> \""+unindt+"\";} "
 			";"+sudc+"ldconfig "+lsys.getlib64()+";'";
 		*/
-		const string b1="cd \""+ivw+"\"&&"+(vorcfg.empty()?s_true:vorcfg)+(ohneconf?"":"&& ./configure ")+cfgbismake+" make";
+		const string b1="cd \""+ivw+"\"&&"+(vorcfg.empty()?s_true:vorcfg)+(ohneconf?"":"&& [ -f configure ]&&./configure ")+cfgbismake+" make";
 		const string b2="cd \""+ivw+"\"&& make install";
-		const string b3="cd \""+ivw+"\"&& make distclean; ./configure; make";
+		const string b3="cd \""+ivw+"\"&&{ grep -q 'distclean:' Makefile&&make distclean||{ grep -q 'clean:' Makefile&&make clean;};};[ -f configure ]&&./configure; make";
 		const string b4="ldconfig "+lsys.getlib64();
 		int erg1;
-		if (!(erg1=systemrueck(b1,obverb,oblog,/*rueck=*/0,/*obsudc=*/0)))
-		     ret=systemrueck(b2,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
-		else if (!systemrueck(b3,obverb,oblog,/*rueck=*/0,/*obsudc=*/0))
-		     ret=systemrueck(b2,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+		if (!(erg1=systemrueck(b1,obverb,oblog,/*rueck=*/0,/*obsudc=*/0))) {
+		////if (!(erg1=systemrueck(b1,obverb,oblog,/*rueck=*/0,/*obsudc=*/0,/*verbergen=*/0,/*obergebnisanzeig=*/wahr,/*ueberschr=*/nix,
+		////				/*errm=*/0,/*obincron=*/0,/*ausgp=*/0,/*obdirekt=*/0))) {
+			ret=systemrueck(b2,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+		} else {
+			if (!systemrueck(b3,obverb,oblog,/*rueck=*/0,/*obsudc=*/0)) {
+				ret=systemrueck(b2,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+			}
+		}
 		systemrueck(b4,obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
 		Log(string(Txk[T_Ergebnis_nach_make])+" "+ltoan(erg1));
 		Log(string(Txk[T_Ergebnis_nach_make_install])+" "+ltoan(ret));
-////		ret=systemrueck(bef,obverb,oblog);
+		////		ret=systemrueck(bef,obverb,oblog);
 		anfgg(unindt,"H="+gethome()+";A=$H/"+meinname+";P="+was+";cd \"$A/$P\" 2>/dev/null"
 				"|| cd $(find \"$H\" -name $P -printf \"%T@ %p\\n\" 2>/dev/null|sort -rn|head -n1|cut -d\" \" -f2)"
 				"&&"+sudc+"make uninstall; cd \"$H\"",b1+" && "+b2+" || "+b3,obverb,oblog);

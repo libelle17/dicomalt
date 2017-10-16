@@ -5,10 +5,10 @@ class paramcl;
 class datcl
 {
 	private:
-		static constexpr const unsigned dim=10;
+		static constexpr const unsigned dim=11;
 		static constexpr const char *knz[dim]={"PatientName","PatientBirthDate","PatientID","PatientSex","ImageType",
-			"ReferringPhysicianName","PerformingPhysicianName","TransducerData","ProcessingFunction","AcquisitionDateTime"};
-		static constexpr const unsigned pnnr=0, itnr=4, rpnr=5, tdnr=7, pfnr=8, adnr=9;
+			"ReferringPhysicianName","PerformingPhysicianName","TransducerData","ProcessingFunction","MediaStorageSOPInstanceUID","AcquisitionDateTime"};
+		static constexpr const unsigned pnnr=0, itnr=4, rpnr=5, tdnr=7, pfnr=8, uidnr=9, adnr=10;
 		string id; // Rueckgabe: ID
 		svec ir;
 	public:

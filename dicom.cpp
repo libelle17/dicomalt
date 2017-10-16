@@ -189,6 +189,8 @@ enum T_
 	T_Keine_Dateien_in,
 	T_Gefunden,
 	T_Erstellt,
+	T_Dateien_in,
+	T_MediaStorageSOPInstanceUID,
 	T_MAX
 }; // enum T_
 
@@ -487,6 +489,10 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
 	{"' gefunden!","'!"},
 	// T_Erstellt
 	{" Erstellt: ","Made: "},
+	// T_Dateien_in
+	{" Dateien in '"," files found in '"},
+	// T_MediaStorageSOPInstanceUID
+	{"MediaStorageSOPInstanceUID","MediaStorageSOPInstanceUID"},
 	{"",""} 
 }; // char const *DPROG_T[T_MAX+1][SprachZahl]=
 class TxB Tx((const char* const* const* const*)DPROG_T);
@@ -548,6 +554,7 @@ void paramcl::pruefdictab()
   Feld("PerformingPhysicianName","varchar","1","",Tx[T_Arzt],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("TransducerData","varchar","1","",Tx[T_TransducerData],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
   Feld("ProcessingFunction","varchar","1","",Tx[T_ProcessingFunction],/*obind=*/1,/*obauto=*/0,/*nnuull=*/0),
+  Feld("MediaStorageSOPInstanceUID","varchar","1","",Tx[T_MediaStorageSOPInstanceUID],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
   Feld("Aufnahmedatum","datetime","0","0",Tx[T_Aufnahmedatum],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
   Feld("Importdatum","datetime","0","0",Tx[T_Importdatum],/*obind=*/1,/*obauto=*/0,/*nnuull=*/1),
  };
@@ -759,17 +766,26 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 	einf.push_back(instyp(pm.My->DBS,"ReferringPhysicianName",&ord[rpnr]));
 	einf.push_back(instyp(pm.My->DBS,"PerformingPhysicianName",&ord[6]));
 	einf.push_back(instyp(pm.My->DBS,"TransducerData",&ord[tdnr]));
-	einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[8]));
-	strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
+	einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[pfnr]));
+	einf.push_back(instyp(pm.My->DBS,"MediaStorageSOPInstanceUID",&ord[uidnr]));
+	if (ord[adnr].empty()) {
+		struct stat st={0};
+		if (!lstat(name.c_str(),&st)) {
+			memcpy(&tma,localtime(&st.st_mtime),sizeof tma);
+		}
+	} else {
+		strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
+	}
 	einf.push_back(instyp(pm.My->DBS,"Aufnahmedatum",&tma));
 	einf.push_back(instyp(pm.My->DBS,"Importdatum",&pm.jt));
-	ord[adnr].insert(8,"_");
+	if (ord[adnr].length()>7) ord[adnr].insert(8,"_");
 	svec eindfeld;
 	eindfeld<<"PatientName";
 	eindfeld<<"Geburtsdatum";
 	eindfeld<<"PatientID";
 	eindfeld<<"Aufnahmedatum";
-	int ZDB=0;
+	eindfeld<<"MediaStorageSOPInstanceUID";
+	int ZDB=(pm.obverb?pm.obverb-1:0);
 	zl=rins.tbins(pm.tbn,einf,aktc,/*sammeln=*/0,/*obverb=*/ZDB,&id,/*eindeutig=*/0,eindfeld);
 	pm.dbz+=zl;
 	Log("ID: '"+violetts+id+schwarz+"', affected rows: "+violett+ltoan(zl)+schwarz,pm.obverb,pm.oblog);
@@ -786,7 +802,11 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 {
 	for(unsigned j=0;j<dim;j++) {
 		if (j!=itnr && j!=rpnr) {
-			bname+=ord[j];
+			if (j==uidnr && ord[j].length()>10) { // die Nummer is a bisserl z lang, der hintere Teil is guad
+				bname+=ord[j].substr(ord[j].length()-10);
+			} else {
+				bname+=ord[j];
+			}
 			if (j<dim-1) bname+='_';
 		} // 			if (j!=itnr && j!=rpnr)
 	} // 		for(int j=0;j<dim;j++)
@@ -807,7 +827,7 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 		} // 		for(int iru=0;iru<2;iru++)
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
-			::Log(Tx[T_Erstellt]+blaus+neuname+schwarz,1,pm.oblog);
+			::Log(blaus+ltoan(nr)+schwarz+") "+Tx[T_Erstellt]+blau+neuname+schwarz,1,pm.oblog);
 			pm.umz++;
 			const string jahr=ord[adnr].substr(0,4);
 			tma.tm_isdst=-1;
@@ -1085,6 +1105,7 @@ int main(int argc, char** argv)
 	} else {
 		pm.pruefimpvz();
 		pm.dcz=rueck.size();
+		Log(blaus+ltoan(rueck.size())+schwarz+Tx[T_Dateien_in]+blau+pm.qvz+schwarz+Tx[T_Gefunden],1,0);
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
 			if (dat.inDB(pm,pm.aktc))
