@@ -58,7 +58,7 @@ const string eins="1";
 el2set::iterator it2;
 set<elem3>::iterator it3;
 const string devtty=" >/dev/tty";
-const string haupt::edit="$(which vim 2>/dev/null || which vi) ";
+const string hcl::edit="$(which vim 2>/dev/null || which vi) ";
 			//	             view="$(which view 2>/dev/null || which vi) + ",
 
 cuscl::cuscl()
@@ -308,8 +308,8 @@ const char *kons_T[T_konsMAX+1][SprachZahl]=
 	{"-Ende- ","-End- "},
 	// T_startundenable
 	{"startundenable()","startandenable()"},
-	// T_pruefber
-	{"pruefber()","checkperm()"},
+	// T_pruefberecht
+	{"pruefberecht()","checkperm()"},
 	// T_Datei
 	{", Datei: "," file: "},
 	// T_Erg
@@ -471,8 +471,8 @@ const char *kons_T[T_konsMAX+1][SprachZahl]=
 	{"prueftif()","checktif()"},
 	// T_holsystemsprache
 	{"holsystemsprache()","fetchingsystemlanguage()"},
-	// T_haupt_haupt
-	{"haupt::haupt()","haupt::haupt()"},
+	// T_hcl_hcl
+	{"hcl::hcl()","hcl::hcl()"},
   {"",""}
 }; // const char *Txkonscl::TextC[T_konsMAX+1][SprachZahl]=
 
@@ -1339,7 +1339,7 @@ char* ltoa_(long value, char* result, int base=10)
   return result;
 } // ltoa_(long value, char* result, int base)
 
-double verszuzahl(const string vers)
+double verszuzahl(const string& vers)
 {
  string vneu;
  uchar obkomma=0;
@@ -1353,11 +1353,11 @@ double verszuzahl(const string vers)
 	 } // 	 if (!obkomma)
 	} //   if (strchr("0123456789",vers[i]))  else if ..
  } //  for(size_t i=0;i<vers.size();i++)
- if (vneu.empty()) return 0; else return atof(vneu.c_str());
+ if (vneu.empty()) return 0; else return strtold(vneu.c_str(),0);
 } // double verstozahl(string vers)
 
 // Programmversion, falls diese beim Programm mit " --version" abrufbar ist
-double haupt::progvers(const string& prog)
+double hcl::progvers(const string& prog)
 {
 	double vers=0;
 	string pfad;
@@ -2437,7 +2437,7 @@ void pruefmehrfach(const string& wen,uchar obstumm/*=0*/)
 	*/
 } // void pruefmehrfach(char* ich)
 
-// aufgerufen in: setfaclggf, pruefber, pruefverz
+// aufgerufen in: setfaclggf, pruefberecht, pruefverz
 int untersuser(const string& uname,__uid_t *uidp/*=0*/, __gid_t *gidp/*=0*/,vector<gid_t> *gids/*=0*/,struct passwd* ustr/*=0*/)
 {
 	struct passwd pwd={0};
@@ -2547,7 +2547,7 @@ void setfaclggf(const string& datei,int obverb/*=0*/,int oblog/*=0*/,const binae
 ////						svec gstat;
 ////						systemrueck("getfacl -e -t '"+pfade[i]+"' 2>/dev/null | grep 'user[ \t]*"+cuser+"[ \t]*"+modbuch+"'||:",obverb,oblog,&gstat);
 ////						obhier = !gstat.size();// wenn keine Berechtigung gefunden => erstellen
-						obhier=pruefber(pfade[i],cuser,ergmod);
+						obhier=pruefberecht(pfade[i],cuser,ergmod);
 					} //        if (i||!obhier)
 					if (obhier) {
 						if (obverb) systemrueck("ls -ld \""+pfade[i]+"\"",2,0,/*rueck=*/0,/*obsudc=*/1);
@@ -2585,7 +2585,7 @@ void setfaclggf(const string& datei,int obverb/*=0*/,int oblog/*=0*/,const binae
 #include <sys/acl.h>
 
 // 0=Berechtigung vorhanden, 1= benutzer=Besitzer, 2= benutzer gehoert zur Besitzergruppe, 3= nichts davon
-int pruefber(const string& datei,const string& benutzer,const mode_t mod/*=01*/,int obverb/*=0*/)
+int pruefberecht(const string& datei,const string& benutzer,const mode_t mod/*=01*/,int obverb/*=0*/)
 {
 	struct stat sdat={0};
 	const uid_t uid=getpwnam(benutzer.c_str())->pw_uid;
@@ -2665,11 +2665,11 @@ int pruefber(const string& datei,const string& benutzer,const mode_t mod/*=01*/,
 		} // 	if (!lstat(datei.c_str(),&sdat))
 	} // benutzer.empty()
 	if (obverb) {
-	 Log(violetts+Txk[T_pruefber]+schwarz+Txk[T_Datei]+blau+datei+schwarz+Txk[T_Benutzer]+blau+benutzer+schwarz+", mode: "+blau+ltoan(mod,8)+
+	 Log(violetts+Txk[T_pruefberecht]+schwarz+Txk[T_Datei]+blau+datei+schwarz+Txk[T_Benutzer]+blau+benutzer+schwarz+", mode: "+blau+ltoan(mod,8)+
 	     schwarz+Txk[T_Erg]+blau+(bererg==3?"3":bererg==2?"2":bererg==1?"1":"0")+schwarz,obverb,0);
 	}
 	return bererg;
-} // int pruefber(const string& datei,const string& benutzer,const mode_t mod/*=01*/)
+} // int pruefberecht(const string& datei,const string& benutzer,const mode_t mod/*=01*/)
 
 // obmitfacl: 1= setzen, falls noetig, >1= immer setzen
 // falls Benutzer root
@@ -2733,7 +2733,7 @@ int pruefverz(const string& verz,int obverb/*=0*/,int oblog/*=0*/, uchar obmitfa
 				// folgendes mindestens notwendig fuer sverz.st_mode
 				fehlt=lstat(stack[i].c_str(),&sverz);
 				// wenn notwendige Rechte fehlen ...
-				if (int prueferg=pruefber(/*datei=*/stack[i],aktben,/*mod=*/i?1:7,obverb)) {
+				if (int prueferg=pruefberecht(/*datei=*/stack[i],aktben,/*mod=*/i?1:7,obverb)) {
 					// .. und korrigiert werden sollen
 					if (obmitfacl) {
 						setfaclggf(stack[i],obverb,oblog, /*obunter=*/wahr, /*mod=*/i?1:7, /*obimmer=*/1,/*faclbak=*/1,/*user=*/aktben);
@@ -2764,7 +2764,7 @@ int pruefverz(const string& verz,int obverb/*=0*/,int oblog/*=0*/, uchar obmitfa
 						}
 					}
 					if (obverb) systemrueck("ls -ld \""+stack[i]+"\"",2,0,/*rueck=*/0,/*obsudc=*/1);
-				} // 					if (int prueferg=pruefber(/*datei=*/stack[i],aktben,/*mod=*/i?1:7))
+				} // 					if (int prueferg=pruefberecht(/*datei=*/stack[i],aktben,/*mod=*/i?1:7))
 			} // 				if (obmachen)
 			if (fehlt) {
 				// sonst Ende
@@ -4809,7 +4809,7 @@ const string s_gz="gz";
 const string& defvors="https://github.com/"+gitv+"/";
 const string& defnachs="/archive/master.tar.gz";
 
-haupt::haupt(const int argc, const char *const *const argv)
+hcl::hcl(const int argc, const char *const *const argv)
 {
 	tstart=clock();
 	cl=argv[0];
@@ -4821,7 +4821,7 @@ haupt::haupt(const int argc, const char *const *const argv)
 					Txk.lgn=(Sprache)akts;
 					if ((strchr("-/",argv[i][0])&&!strcmp(argv[i]+1,Txk[T_v_k])) || 
 						  (!strncmp(argv[i],"--",2)&&!strcmp(argv[i]+2,Txk[T_verbose_l]))) { // -v, -w, -verbose, -wortreich
-						cout<<violett<<Txk[T_haupt_haupt]<<schwarz<<endl;
+						cout<<violett<<Txk[T_hcl_hcl]<<schwarz<<endl;
 						obverb=1;
 					} // if ((strchr...
 				} //         for(int akts=0;akts<SprachZahl;akts++)
@@ -4848,16 +4848,16 @@ haupt::haupt(const int argc, const char *const *const argv)
 	logdt=&loggespfad.front();
 	pruefplatte(); // geht ohne Logaufruf, falls nicht #define systemrueckprofiler
 	linstp=new linst_cl(obverb,oblog);
-} // haupt::haupt()
+} // hcl::hcl()
 
-haupt::~haupt()
+hcl::~hcl()
 {
 	delete linstp;
 	linstp=0;
 }
 
 // wird aufgerufen in paramcl::paramcl, pruefunpaper, holvomnetz, kompilbase, kompilfort
-int haupt::pruefinstv()
+int hcl::pruefinstv()
 {
 	int erg=0;
 	////	if (instvz.empty()) KLA
@@ -4865,10 +4865,10 @@ int haupt::pruefinstv()
 	erg=pruefverz(instvz,obverb,oblog);
 	////	KLZ // 	if (instvz.empty()) 
 	return erg;
-} // void haupt::pruefinstv()
+} // void hcl::pruefinstv()
 
 
-int haupt::holvomnetz(const string& datei,const string& vors/*=defvors*/,const string& nachs/*=defnachs*/)
+int hcl::holvomnetz(const string& datei,const string& vors/*=defvors*/,const string& nachs/*=defnachs*/)
 {
 	int erg=1;
 	if (!pruefinstv()) {
@@ -4886,9 +4886,9 @@ int haupt::holvomnetz(const string& datei,const string& vors/*=defvors*/,const s
 		} //     if (!qrueck.size())
 	} // if (!pruefinstv())
 	return erg;
-} // int haupt::holvomnetz(const string& datei,const string& vors/*=defvors*/,const string& nachs/*=defnachs*/)
+} // int hcl::holvomnetz(const string& datei,const string& vors/*=defvors*/,const string& nachs/*=defnachs*/)
 
-int haupt::kompilbase(const string& was, const string& endg)
+int hcl::kompilbase(const string& was, const string& endg)
 {
 	if (!pruefinstv()) {
 		int kerg=0;
@@ -4898,9 +4898,9 @@ int haupt::kompilbase(const string& was, const string& endg)
 		return kerg;
 	} //   if (!pruefinstv())
 	return 1;
-} // int haupt::kompilbase(const string& was,const string& endg)
+} // int hcl::kompilbase(const string& was,const string& endg)
 
-int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/,uchar ohneconf/*=0*/)
+int hcl::kompilfort(const string& was,const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/,uchar ohneconf/*=0*/)
 {
 	int ret=1;
 	if (!pruefinstv()) {
@@ -4920,8 +4920,10 @@ int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const stri
 		*/
 		const string b1="cd \""+ivw+"\"&&"+(vorcfg.empty()?s_true:vorcfg)+(ohneconf?"":"&& [ -f configure ]&&./configure ")+cfgbismake+" make";
 		const string b2="cd \""+ivw+"\"&& make install";
-		const string b3="cd \""+ivw+"\"&&{ grep -q 'distclean:' Makefile&&make distclean||{ grep -q 'clean:' Makefile&&make clean;};};[ -f configure ]&&./configure; make";
-		const string b4="ldconfig "+lsys.getlib64();
+		const string b3="cd \""+ivw+"\"&&{ grep -q 'distclean:' Makefile&&make distclean||{ grep -q 'clean:' Makefile&&make clean;};};"
+		              	"[ -f configure ]&&./configure; make";
+////		const string b4="ldconfig "+lsys.getlib64();
+		const string b4="ldconfig /usr";
 		int erg1;
 		if (!(erg1=systemrueck(b1,obverb,oblog,/*rueck=*/0,/*obsudc=*/0))) {
 		////if (!(erg1=systemrueck(b1,obverb,oblog,/*rueck=*/0,/*obsudc=*/0,/*verbergen=*/0,/*obergebnisanzeig=*/wahr,/*ueberschr=*/nix,
@@ -4941,10 +4943,32 @@ int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const stri
 				"&&"+sudc+"make uninstall; cd \"$H\"",b1+" && "+b2+" || "+b3,obverb,oblog);
 	} // 		if (!pruefinstv())
 	return ret;
-} // int haupt::kompilfort(const string& was,const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/,uchar ohneconf/*=0*/)
+} // int hcl::kompilfort(const string& was,const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/,uchar ohneconf/*=0*/)
 
 // aufgerufen bei autofax in: pruefhyla, empfcapi, rueckfragen
-void haupt::prueftif()
+void hcl::prueftif(string aktvers)
+{
+
+	Log(violetts+Txk[T_prueftif]+schwarz+" "+aktvers);
+	const string vstr="4.08001";
+	const int altobverb=obverb;
+	size_t p1;
+	if ((p1=aktvers.find('\n'))!=string::npos) aktvers.erase(p1);
+	if ((p1=aktvers.rfind(' '))!=string::npos) aktvers.erase(0,p1+1);
+	const double tv=verszuzahl(aktvers);
+	if (tv<atof(vstr.c_str())) {
+		obverb=1;
+		linstp->doggfinst("cmake",obverb,oblog); 
+		const string proj="tiff_copy";
+		holvomnetz(proj);
+		kompiliere(proj,s_gz,"sed -i.bak s'/(thandle_t) client_data.fd);/(thandle_t) \\&client_data.fd);/' tools/fax2tiff.c &&"
+                  			 "sed -i.bak s'/Version 4.0.8\\\\n/Version "+vstr+"\\\\n/' libtiff/tiffvers.h");
+		obverb=altobverb;
+	} // 	if (dcmv<3.62)
+} // void paramcl::pruefdcmtk()
+
+/*//
+void hcl::prueftif()
 {
 	Log(violetts+Txk[T_prueftif]+schwarz);
 	linstp->doggfinst("cmake",obverb,oblog); 
@@ -4957,22 +4981,22 @@ void haupt::prueftif()
 		"&& sed -i.bak s\"/uint16 Param;/uint32 Param;/\" libtiff/tif_fax3.h"
 		"&& cmake -DCMAKE_INSTALL_PREFIX=/usr -DLIBTIFF_ALPHA_VERSION=1 . "
 		"&& make";
-	if (!(systemrueck(bef,obverb,oblog,/*rueck=*/0,/*obsudc=*/0)))
-		systemrueck("cd \""+ivp+"\" && make install",obverb,oblog,/*rueck=*/0,/*obsudc=*/1);
+	if (!(systemrueck(bef,obverb,oblog,0,0)))
+		systemrueck("cd \""+ivp+"\" && make install",obverb,oblog,0,1);
 	anfgg(unindt,"cd \""+ivp+"\" && cat install_manifest.txt|"+sudc+linstp->xargspf+" rm; cd \""+instvz+"\"",bef,obverb,oblog);
 } // void paramcl::prueftif()
+*/
 
-
-int haupt::kompiliere(const string& was,const string& endg, const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/)
+int hcl::kompiliere(const string& was,const string& endg, const string& vorcfg/*=nix*/, const string& cfgbismake/*==s_dampand*/)
 {
 	if (!kompilbase(was,endg)) {
 		return kompilfort(was,vorcfg,cfgbismake);
 	} //    if (!kompilbase(was,endg))
 	return 1;
-} // int haupt::kompiliere(const string was,const string endg,const string nachtar, const string vorcfg,const string cfgbismake)
+} // int hcl::kompiliere(const string was,const string endg,const string nachtar, const string vorcfg,const string cfgbismake)
 
 // augerufen in: main
-void haupt::zeigversion()
+void hcl::zeigversion()
 {
 	struct tm tm={0};
 	char buf[100];
@@ -4990,10 +5014,10 @@ void haupt::zeigversion()
 	cout<<Txk[T_Quelle]<<blau<<defvors/*//"https://github.com/libelle17/"*/<<meinname<<schwarz<<endl;
 	cout<<Txk[T_Installationsverzeichnis]<<blau<<instvz<<schwarz<<endl;
 	cout<<Txk[T_Hilfe]<<braun<<"man "<<base_name(mpfad)<<schwarz<<Txk[T_or]<<braun<<"man -Lde "<<base_name(mpfad)<<schwarz<<"'"<<endl;
-} // void haupt::zeigversion(const char* const prog)
+} // void hcl::zeigversion(const char* const prog)
 
 // aufgerufen in: main
-void haupt::zeigkonf()
+void hcl::zeigkonf()
 {
 	struct stat kstat={0};
 	char buf[100]={0};
@@ -5008,10 +5032,10 @@ void haupt::zeigkonf()
 	for(unsigned i=0;i<agcnfA.zahl;i++) {
 		cout<<blau<<setw(20)<<agcnfA[i].name<<schwarz<<": "<<agcnfA[i].wert<<endl;
 	} //   for(unsigned i=0;i<agcnfA.zahl;i++)
-} // void haupt::zeigkonf()
+} // void hcl::zeigkonf()
 // augerufen in: anhalten(), zeigkonf()
 
-void haupt::gcl0()
+void hcl::gcl0()
 {
 	uchar plusverb=0;
 
@@ -5068,10 +5092,10 @@ void haupt::gcl0()
 		} //     if (!logdname.empty())
 		obkschreib=1;
 	} // if (logvneu ||logdneu) 
-} // void haupt::gcl0()
+} // void hcl::gcl0()
 
 // in lieskonfein, getcommandl0, getcommandline, rueckfragen
-void haupt::lgnzuw()
+void hcl::lgnzuw()
 {
 	if (langu=="d" || langu=="D" || langu=="deutsch" || langu=="Deutsch") {
 		Txk.lgn=deutsch;
@@ -5080,14 +5104,14 @@ void haupt::lgnzuw()
 	} else {
 		Txk.lgn=deutsch;
 	} // 	if (langu=="d" || langu=="D" || langu=="deutsch" || langu=="Deutsch") else else
-} // void haupt::lgnzuw()
+} // void hcl::lgnzuw()
 
-int haupt::Log(const string& text,const bool oberr/*=0*/,const short klobverb/*=0*/) const
+int hcl::Log(const string& text,const bool oberr/*=0*/,const short klobverb/*=0*/) const
 {
 	return ::Log(text,obverb,oblog,oberr,klobverb);
-} // int haupt::Log(const string& text,bool oberr/*=0*/,short klobverb/*=0*/)
+} // int hcl::Log(const string& text,bool oberr/*=0*/,short klobverb/*=0*/)
 
-void haupt::dovi()
+void hcl::dovi()
 {
 	svec d1, d2;
 	d1<<smbdt;
@@ -5095,11 +5119,11 @@ void haupt::dovi()
 	d2<<groupdt;
 	d2<<sudoersdt;
 	dodovi(d1,d2);
-} // void haupt::dovi()
+} // void hcl::dovi()
 
-const char* const haupt::smbdt="/etc/samba/smb.conf";
+const char* const hcl::smbdt="/etc/samba/smb.conf";
 // wird aufgerufen in: main
-void haupt::pruefsamba(const vector<const string*>& vzn,const svec& abschni,const svec& suchs, const char* DPROG,const string& cuser)
+void hcl::pruefsamba(const vector<const string*>& vzn,const svec& abschni,const svec& suchs, const char* DPROG,const string& cuser)
 {
 	Log(violetts+Txk[T_pruefsamba]);
 	int sgest=0, ngest=0;
@@ -5311,7 +5335,7 @@ void haupt::pruefsamba(const vector<const string*>& vzn,const svec& abschni,cons
 	} //   if (!(conffehlt=lstat(smbdt,&sstat)))
 } // pruefsamba
 
-void haupt::lieskonfein()
+void hcl::lieskonfein()
 {
 	Log(violetts+Txk[T_lieskonfein]+schwarz);
 	if (akonfdt.empty()) akonfdt=aktprogverz()+".conf";
@@ -5339,17 +5363,17 @@ void haupt::lieskonfein()
 				obkschreib=1;
 		} // if (agcnfA[lfd].wert.compare(langu)) 
 	} //     if (langu.empty())  else
-} // void haupt::lieskonfein()
+} // void hcl::lieskonfein()
 
-// wird aufgerufen von der von haupt abgeleiteten Klasse, dort lieskonfein()
-void haupt::setzlog()
+// wird aufgerufen von der von hcl abgeleiteten Klasse, dort lieskonfein()
+void hcl::setzlog()
 {
 	loggespfad=logvz+vtz+logdname;
 	logdt=&loggespfad.front();
-} // void haupt::setzlog()
+} // void hcl::setzlog()
 
 //wird aufgerufen in main
-void haupt::lieszaehlerein(ulong *arp/*=0*/,ulong *tap/*=0*/,ulong *map/*=0*/, struct tm *lap/*=0*/,
+void hcl::lieszaehlerein(ulong *arp/*=0*/,ulong *tap/*=0*/,ulong *map/*=0*/, struct tm *lap/*=0*/,
 #ifdef immerwart
 		string *obempfp/*=0*/,string *obgesap/*=0*/,
 #endif // immerwart
@@ -5375,12 +5399,12 @@ void haupt::lieszaehlerein(ulong *arp/*=0*/,ulong *tap/*=0*/,ulong *map/*=0*/, s
 	if (obempfp) if (zcnfA[4].gelesen) zcnfA[4].hole(obempfp);
 	if (obgesap) if (zcnfA[5].gelesen) zcnfA[5].hole(obgesap);
 #endif // immerwart
-} // void haupt::lieszaehlerein(ulong *arp/*=0*/,ulong *tap/*=0*/,ulong *map/*=0*/,ulong *lap/*=0*/)
+} // void hcl::lieszaehlerein(ulong *arp/*=0*/,ulong *tap/*=0*/,ulong *map/*=0*/,ulong *lap/*=0*/)
 
 
 
-// wird aufgerufen in main vom Hauptthread
-void haupt::setzzaehler()
+// wird aufgerufen in main vom hclthread
+void hcl::setzzaehler()
 {
 	aufrufe++;
 	//// <<"aufrufe: "<<aufrufe<<endl;
@@ -5404,10 +5428,10 @@ void haupt::setzzaehler()
 	zcnfA[4].setze(&nix);
 	zcnfA[5].setze(&nix);
 #endif // immerwart
-} // void haupt::setzzaehler()
+} // void hcl::setzzaehler()
 
-// wird aufgerufen in main vom Hauptthread
-void haupt::schreibzaehler(
+// wird aufgerufen in main vom hclthread
+void hcl::schreibzaehler(
 #ifdef immerwart
 		const string* obempfp/*=0*/, const string* obgesap/*=0*/
 #endif
@@ -5421,10 +5445,10 @@ void haupt::schreibzaehler(
 	if (f.is_open()) {
 		zcnfA.aschreib(&f);
 	} // 	if (f.is_open())
-} // void haupt::schreibzaehler(const string* obgesap, const string* obsendCp, const string* obsendHp)
+} // void hcl::schreibzaehler(const string* obgesap, const string* obsendCp, const string* obsendHp)
 
 // aufgerufen in pruefcron, pruefmodcron und anhalten
-void haupt::setztmpcron()
+void hcl::setztmpcron()
 {
 	if (tmpcron.empty()) {
 		// Einbau von '~' ergaebe bei Aufruf mit und ohne sudo unterschiedliche Erweiterungen
@@ -5433,7 +5457,7 @@ void haupt::setztmpcron()
 } // void setztmpcron()
 
 // wird aufgerufen in pruefcron (2x)
-void haupt::tucronschreib(const string& zsauf,const uchar cronzuplanen,const string& cbef)
+void hcl::tucronschreib(const string& zsauf,const uchar cronzuplanen,const string& cbef)
 {
 	string unicmd="rm -f "+tmpcron+";";
 	string cmd=unicmd;
@@ -5453,10 +5477,10 @@ void haupt::tucronschreib(const string& zsauf,const uchar cronzuplanen,const str
 	//// ersetzAlle(unicmd,"'\\''","'");
 	const string bef=sudc+"sh -c '"+cmd+"'";
 	anfgg(unindt,unicmd,bef,obverb,oblog);
-} // void haupt::tucronschreib(const string& zsauf,const uchar cronzuplanen,const string& cbef)
+} // void hcl::tucronschreib(const string& zsauf,const uchar cronzuplanen,const string& cbef)
 
 // wird aufgerufen in: main
-uchar haupt::pruefcron()
+uchar hcl::pruefcron()
 {
 	crongeprueft=1;
 	uchar obschreib=0;
@@ -5539,7 +5563,7 @@ uchar haupt::pruefcron()
 } // pruefcron
 // wird aufgerufen in: main
 
-void haupt::schlussanzeige()
+void hcl::schlussanzeige()
 {
 	Log(violetts+Txk[T_schlussanzeige]+schwarz);
 	tende = clock();
@@ -5568,7 +5592,7 @@ void viadd(string* cmdp,const string& datei,const uchar ro/*=0*/,const uchar hin
 	} //  if (is.good())
 } // void viadd(string *cmdp,string datei)
 
-void haupt::vischluss(string& erg)
+void hcl::vischluss(string& erg)
 {
 	erg+="tabfirst' -p";
 	string exdt=instvz+"/.exrc";
@@ -5577,7 +5601,7 @@ void haupt::vischluss(string& erg)
 } // void vischluss(string& cmd,string& erg)
 
 // aufgerufen in: main
-void haupt::dodovi(const svec d1,const svec d2)
+void hcl::dodovi(const svec d1,const svec d2)
 {
 	cmd=edit;
 	viadd(&cmd,akonfdt);
@@ -5591,9 +5615,9 @@ void haupt::dodovi(const svec d1,const svec d2)
 		viadd(&erg,d2[i],1,1,0);
 	}
 	vischluss(erg);
-} // void haupt::dovi()
+} // void hcl::dovi()
 
-void haupt::update(const string& DPROG)
+void hcl::update(const string& DPROG)
 {
 	if (autoupd && tagesaufr == 2) {
 ////		perfcl perf("main");
@@ -5625,14 +5649,14 @@ void haupt::update(const string& DPROG)
 		} // 		if (srueck.size())
 	} // 	else if (tagesaufr % 5)  // 	if (pm.autoupd && pm.tagesaufr == 2)
 	//// <<"Tagesaufr: "<<tagesaufr<<endl;
-} // void haupt::update(const string& DPROG)
+} // void hcl::update(const string& DPROG)
 
-const string	haupt::passwddt="/etc/passwd",
-			haupt::groupdt="/etc/group",
-			haupt::sudoersdt="/etc/sudoers";
+const string	hcl::passwddt="/etc/passwd",
+			hcl::groupdt="/etc/group",
+			hcl::sudoersdt="/etc/sudoers";
 
 
-void haupt::setzbenutzer(string *user)
+void hcl::setzbenutzer(string *user)
 {
 	cmd="cat "+passwddt+" | grep /home/ | cut -d':' -f 1";
 	systemrueck(cmd,obverb,oblog,&benutzer,/*obsudc=*/0);

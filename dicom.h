@@ -5,9 +5,9 @@ class paramcl;
 class datcl
 {
 	private:
-		static constexpr const unsigned dim=11;
+		static constexpr const unsigned dim=12;
 		static constexpr const char *knz[dim]={"PatientName","PatientBirthDate","PatientID","PatientSex","ImageType",
-			"ReferringPhysicianName","PerformingPhysicianName","TransducerData","ProcessingFunction","MediaStorageSOPInstanceUID","AcquisitionDateTime"};
+			"ReferringPhysicianName","PerformingPhysicianName","TransducerData","ProcessingFunction","MediaStorageSOPInstanceUID","AcquisitionDateTime","AcquisitionDate"};
 		static constexpr const unsigned pnnr=0, itnr=4, rpnr=5, tdnr=7, pfnr=8, uidnr=9, adnr=10;
 		string id; // Rueckgabe: ID
 		svec ir;
@@ -23,7 +23,7 @@ class datcl
 		datcl(string& name);
 };
 
-class paramcl: public haupt // Programmparameter 
+class paramcl: public hcl // Programmparameter 
 {
 	public:
 		const int aktc=0;
@@ -65,6 +65,7 @@ class paramcl: public haupt // Programmparameter
 		int dorueck();
     void autofkonfschreib();
 		void MusterVorgb();
+		void pruefdcmtk();
 		void VorgbSpeziell() 
 #ifdef DPROGcpp
 			__attribute__((weak)) // implementationsspezifische Vorgaben (aber nur Quellcodeaenderung aenderbar, Modul vgb.cpp)

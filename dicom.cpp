@@ -191,6 +191,8 @@ enum T_
 	T_Erstellt,
 	T_Dateien_in,
 	T_MediaStorageSOPInstanceUID,
+	T_schonda,
+	T_schon_da,
 	T_MAX
 }; // enum T_
 
@@ -493,6 +495,10 @@ char const *DPROG_T[T_MAX+1][SprachZahl]={
 	{" Dateien in '"," files found in '"},
 	// T_MediaStorageSOPInstanceUID
 	{"MediaStorageSOPInstanceUID","MediaStorageSOPInstanceUID"},
+	// T_schonda
+	{"schon da: ","already here: "},
+	// T_schon_da
+	{" schon da!"," already here!"},
 	{"",""} 
 }; // char const *DPROG_T[T_MAX+1][SprachZahl]=
 class TxB Tx((const char* const* const* const*)DPROG_T);
@@ -578,7 +584,7 @@ int paramcl::dorueck()
  return erg;
 }
 
-paramcl::paramcl(const int argc, const char *const *const argv,const int obverb/*=0*/, const int oblog/*=0*/):haupt(argc,argv)
+paramcl::paramcl(const int argc, const char *const *const argv,const int obverb/*=0*/, const int oblog/*=0*/):hcl(argc,argv)
 {
 	//  akonfdt.clear();
 } // paramcl::paramcl()
@@ -595,7 +601,7 @@ void paramcl::getcommandl0()
 
 void paramcl::lieskonfein()
 {
-	haupt::lieskonfein();
+	hcl::lieskonfein();
 	lfd++;
 	if (agcnfA[lfd].gelesen) agcnfA[lfd].hole(&host); else rzf=1; lfd++;
 	if (agcnfA[lfd].gelesen) agcnfA[lfd].hole(&muser); else rzf=1; lfd++;
@@ -622,7 +628,7 @@ void paramcl::lieskonfein()
 int paramcl::getcommandline()
 {
 	Log(violetts+"getcommandline()"+schwarz);
-	// s.a. haupt::getcl0()
+	// s.a. hcl::getcl0()
 	////  uchar plusverb=0;
 	opts.push_back(/*2*/optioncl(T_host_k,T_host_l,&Tx, T_verwendet_die_Datenbank_auf_Host_string_anstatt_auf,0,&host,psons,&agcnfA,"host",&obkschreib));
 	opts.push_back(/*2*/optioncl(T_muser_k,T_muser_l,&Tx, T_verwendet_fuer_MySQL_MariaDB_den_Benutzer_string_anstatt,0,&muser,psons,&agcnfA,
@@ -729,6 +735,7 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 						size_t p2=ir[zl].find(']',p1);
 						if (p2!=string::npos) {
 							string roh=ir[zl].substr(p1+1,p2-p1-1);
+							gtrim(&roh);
 							if (j==tdnr) if ((p1=roh.find('\\'))!=string::npos) roh.erase(p1);
 							if ((p1=roh.find('\''))!=string::npos) roh.erase(p1);
 							if ((p1=roh.find('\"'))!=string::npos) roh.erase(p1);
@@ -768,17 +775,30 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 	einf.push_back(instyp(pm.My->DBS,"TransducerData",&ord[tdnr]));
 	einf.push_back(instyp(pm.My->DBS,"ProcessingFunction",&ord[pfnr]));
 	einf.push_back(instyp(pm.My->DBS,"MediaStorageSOPInstanceUID",&ord[uidnr]));
+//	if (ord[adnr].empty()) ord[adnr]=ord[adnr+1];
+	// Ersatz: Dateidatum
 	if (ord[adnr].empty()) {
 		struct stat st={0};
 		if (!lstat(name.c_str(),&st)) {
+			// ggf. AcquisitionDate mit noch hoeherer Präferenz, falls Datei editiert wurde
 			memcpy(&tma,localtime(&st.st_mtime),sizeof tma);
-		}
+			char buf[20];
+			//// strftime(buf,sizeof buf,"%Y%m%d%H%M%S",&tma); caus<<violett<<buf<<schwarz<<endl;
+			if (!ord[adnr+1].empty()) {
+				tma.tm_year=atoi(ord[adnr+1].substr(0,4).c_str())-1900;
+				tma.tm_mon=atoi(ord[adnr+1].substr(4,2).c_str())-1;
+				tma.tm_mday=atoi(ord[adnr+1].substr(6,2).c_str());
+				mktime(&tma);
+			}
+			strftime(buf,sizeof buf,"%Y%m%d%H%M%S",&tma);
+			ord[adnr]=buf;
+		} // 		if (!lstat(name.c_str(),&st))
 	} else {
 		strptime(ord[adnr].c_str(),"%Y%m%d%H%M%S",&tma);
-	}
+	} // 	if (ord[adnr].empty()) else
 	einf.push_back(instyp(pm.My->DBS,"Aufnahmedatum",&tma));
 	einf.push_back(instyp(pm.My->DBS,"Importdatum",&pm.jt));
-	if (ord[adnr].length()>7) ord[adnr].insert(8,"_");
+	if (ord[adnr].length()>8) ord[adnr].insert(8,"_"); // für bessere Lesbarkeit Datum und Zeit trennen
 	svec eindfeld;
 	eindfeld<<"PatientName";
 	eindfeld<<"Geburtsdatum";
@@ -788,6 +808,9 @@ ulong datcl::inDB(paramcl& pm,const int& aktc)
 	int ZDB=(pm.obverb?pm.obverb-1:0);
 	zl=rins.tbins(pm.tbn,einf,aktc,/*sammeln=*/0,/*obverb=*/ZDB,&id,/*eindeutig=*/0,eindfeld);
 	pm.dbz+=zl;
+	if (!zl) { 
+		Log(Tx[T_schonda]+blaus+ord[pnnr]+", "+ord[uidnr]+schwarz,1,pm.oblog);
+	}
 	Log("ID: '"+violetts+id+schwarz+"', affected rows: "+violett+ltoan(zl)+schwarz,pm.obverb,pm.oblog);
 	return zl;
 } // void datcl::inDB(paramcl& pm., const int& aktc)
@@ -801,17 +824,19 @@ datcl::datcl(string& name): name(name)
 void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 {
 	for(unsigned j=0;j<dim;j++) {
+		if (j==adnr+1 && !ord[adnr].empty()) continue; // wenn AcquisitionDateTime fehlt, dann AcquisitionDate nehmen
+		if (j==adnr && ord[adnr].empty()) j++;
 		if (j!=itnr && j!=rpnr) {
 			if (j==uidnr && ord[j].length()>10) { // die Nummer is a bisserl z lang, der hintere Teil is guad
 				bname+=ord[j].substr(ord[j].length()-10);
 			} else {
 				bname+=ord[j];
 			}
-			if (j<dim-1) bname+='_';
+			if (j<dim-2) bname+='_'; // nicht am Schluss
 		} // 			if (j!=itnr && j!=rpnr)
 	} // 		for(int j=0;j<dim;j++)
 	if (id.empty()) {
-		Log(rots+bname+schwarz+" schon da!",pm.obverb,pm.oblog);
+		Log(rots+bname+schwarz+Tx[T_schon_da],pm.obverb,pm.oblog);
 	} else {
 		const string neuname=pm.zvz+"/"+bname+".png";
 		for(int iru=0;iru<2;iru++) {
@@ -827,7 +852,7 @@ void datcl::aufPlatte(paramcl& pm,const int& aktc,const size_t& nr)
 		} // 		for(int iru=0;iru<2;iru++)
 		struct stat nst={0};
 		if (!lstat(neuname.c_str(),&nst)) {
-			::Log(blaus+ltoan(nr)+schwarz+") "+Tx[T_Erstellt]+blau+neuname+schwarz,1,pm.oblog);
+			::Log(blaus+ltoan(nr)+schwarz+") "+Tx[T_Erstellt]+blaus+neuname+schwarz,1,pm.oblog);
 			pm.umz++;
 			const string jahr=ord[adnr].substr(0,4);
 			tma.tm_isdst=-1;
@@ -883,7 +908,7 @@ void paramcl::schlussanzeige()
 	::Log(blaus+ltoan(umz,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+zvz+schwarz+Tx[T_erstellt],1,1);
 	::Log(blaus+ltoan(u2z,10,0,5)+schwarz+Tx[T_Dateien_in_Verzeichnis]+blau+z2vz+vtz+Tx[T_jahr]+schwarz+Tx[T_kopiert],1,1);
 	::Log(blaus+(pfehler?Tx[T_Keine]:Tx[T_Alle])+schwarz+Tx[T_Dateien_von]+blau+qvz+schwarz+Tx[T_nach_]+blau+avz+vtz+impvz+schwarz+Tx[T_verschoben],1,1);
-	haupt::schlussanzeige();
+	hcl::schlussanzeige();
 } // void paramcl::schlussanzeige()
 
 void paramcl::machimpvz()
@@ -1041,11 +1066,26 @@ void paramcl::autofkonfschreib()
 	} // if (rzf||obkschreib) 
 } // void paramcl::autofkonfschreib()
 
+void paramcl::pruefdcmtk()
+{
+  const double dcmv=progvers("dcmj2pnm");
+	if (dcmv<3.62) {
+		int altobverb=obverb;
+		obverb=1;
+		linstp->doggfinst("cmake",obverb,oblog); 
+		const string proj="dcmtk_copy";
+		holvomnetz(proj);
+		kompiliere(proj,s_gz);
+		obverb=altobverb;
+	} // 	if (dcmv<3.62)
+} // void paramcl::pruefdcmtk()
 
 int main(int argc, char** argv)
 {
-	//// <<TIFFGetVersion()<<endl;
+	caus<<TIFFGetVersion()<<endl;
 	paramcl pm(argc,argv,/*obverb=*/0,/*oblog=*/0); // Programmparameter
+	pm.prueftif(TIFFGetVersion());
+	pm.pruefdcmtk();
 	if (0) {
 		caus<<pm.progvers("dcmdump")<<endl;
 		caus<<pm.progvers("dcmj2pnm")<<endl;
@@ -1108,8 +1148,9 @@ int main(int argc, char** argv)
 		Log(blaus+ltoan(rueck.size())+schwarz+Tx[T_Dateien_in]+blau+pm.qvz+schwarz+Tx[T_Gefunden],1,0);
 		for(size_t nr=0;nr<rueck.size();nr++) {
 			datcl dat(rueck[nr]);
-			if (dat.inDB(pm,pm.aktc))
-			dat.aufPlatte(pm,pm.aktc,nr);
+			if (dat.inDB(pm,pm.aktc)) {
+				dat.aufPlatte(pm,pm.aktc,nr);
+			}
 		} // 	for(size_t nr=0;nr<rueck.size();nr++)
 		pm.verschieb();
 	} // 	if (!rueck.size())
